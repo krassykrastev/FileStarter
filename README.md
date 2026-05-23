@@ -2,14 +2,14 @@
 It is designed to be simple, reliable, and unobtrusive — perfect for automating your daily startup routine.
 
 ✨ Features
-✅ Launch apps (Teams, Outlook, or custom files) on a schedule
-✅ Configure different launch times for each day of the week
-✅ Support for up to 4 files or applications
-✅ Vacation mode (temporarily disable auto-start)
-✅ System tray integration with quick controls
-✅ Desktop notifications when files are launched
-✅ Prevents launching duplicate instances
-✅ Configurable launch delay between apps
+- Launch apps (Teams, Outlook, or custom files) on a schedule
+- Configure different launch times for each day of the week
+- Support for up to 4 files or applications
+- Vacation mode (temporarily disable auto-start)
+- System tray integration with quick controls
+- Desktop notifications when files are launched
+- Prevents launching duplicate instances
+- Configurable launch delay between apps
 
 🧠 How it works
 FileStarter runs quietly in the system tray and:
@@ -23,8 +23,7 @@ You can fully control behavior via the Settings menu.
 👉 Download the latest version from Releases:
 ➡️ https://github.com/krassykrastev/FileStarter/releases
 
-⚙️ Installation
-No installation required.
+⚙️ Installation: No installation required.
 
 Download FileStarter.exe
 Place it anywhere you like, i.e. Downloads, Desktop

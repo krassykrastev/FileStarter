@@ -59,22 +59,20 @@ any file with a default Windows association
 
 🧩 Default Shortcuts
 Quick restore buttons available:
-
-File 1 → MS Teams
-File 2 → MS Outlook
+- File 1 → MS Teams
+- File 2 → MS Outlook
 
 ⚠️ Notes
-FileStarter does not install anything
-It does not modify your system
-It runs fully locally
+- FileStarter does not install anything
+- It does not modify your system
+- It runs fully locally
 
 
 💡 Example Use Cases
-Launch Teams and Outlook every weekday at 09:00
-Start work apps automatically before your workday
-Open important files at a specific time
+- Launch Teams and Outlook every weekday at 09:00
+- Start work apps automatically before your workday
+- Open important files at a specific time
 
 ❤️ Support the project
-If you find FileStarter useful:
-👉 Buy me a beer 🍺
+- Enjoying FileStarter? Buy me a beer 🍺
 https://paypal.me/krasikrastev

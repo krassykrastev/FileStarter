@@ -111,6 +111,7 @@ namespace TeamsTrayStarter
             return $"File {fileIndex}: {GetDisplayNameFromPath(path, fallbackText)}";
         }
 
+        
         public static bool IsAutoStartPausedByDate(AppSettings s, DateTime nowLocal)
         {
             if (!s.AutoStartOffFromEnabled || s.AutoStartOffFromDate == null)
@@ -126,38 +127,63 @@ namespace TeamsTrayStarter
                 return false;
 
             DateTime end = s.AutoStartOffUntilDate.Value.Date;
+
+            // Vacation mode is active from start date through end date inclusive
             return today <= end;
         }
-
+  
         public static bool ApplyScheduledAutoStartOffIfDue(AppSettings s, DateTime nowLocal)
         {
             if (!s.AutoStartOffFromEnabled || s.AutoStartOffFromDate == null)
                 return false;
 
-            if (s.AutoStartOffUntilEnabled && s.AutoStartOffUntilDate != null)
-                return false;
-
             DateTime today = nowLocal.Date;
             DateTime start = s.AutoStartOffFromDate.Value.Date;
 
+            // CASE 1:
+            // Vacation mode has BOTH start and end dates
+            if (s.AutoStartOffUntilEnabled && s.AutoStartOffUntilDate != null)
+            {
+                DateTime end = s.AutoStartOffUntilDate.Value.Date;
+
+                // Before the vacation period starts -> do nothing
+                if (today < start)
+                    return false;
+
+                // During vacation period (inclusive) -> do nothing here
+                // Auto-start remains paused via IsAutoStartPausedByDate(...)
+                if (today <= end)
+                    return false;
+
+                // Vacation has ended (today is AFTER the end date)
+                // -> turn vacation mode off and switch auto-start back on
+                s.AutoStartOffFromEnabled = false;
+                s.AutoStartOffFromDate = null;
+                s.AutoStartOffUntilEnabled = false;
+                s.AutoStartOffUntilDate = null;
+
+                s.AutoStartTeamsEnabled = true;
+
+                return true;
+            }
+
+            // CASE 2:
+            // Only "Turn auto-start OFF from" is checked (no "until" date)
+            // Keep your existing one-time OFF behavior
             if (today < start)
                 return false;
-
-            bool changed = false;
 
             if (s.AutoStartTeamsEnabled)
             {
                 s.AutoStartTeamsEnabled = false;
-                changed = true;
             }
 
             s.AutoStartOffFromEnabled = false;
             s.AutoStartOffFromDate = null;
             s.AutoStartOffUntilEnabled = false;
             s.AutoStartOffUntilDate = null;
-            changed = true;
 
-            return changed;
+            return true;
         }
 
         public static bool IsEffectiveAutoStartEnabled(AppSettings s, DateTime nowLocal)

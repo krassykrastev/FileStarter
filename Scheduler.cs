@@ -1,4 +1,3 @@
-
 using System;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -42,7 +41,7 @@ namespace TeamsTrayStarter
             var settings = _getSettings();
             if (SettingsManager.ApplyScheduledAutoStartOffIfDue(settings, DateTime.Now))
             {
-                Logger.Info("Scheduler: one-time scheduled auto-start OFF applied.");
+                Logger.Info("Scheduler: scheduled auto-start state transition applied.");
                 _saveSettings(settings);
             }
 
@@ -79,7 +78,7 @@ namespace TeamsTrayStarter
             var settings = _getSettings();
             if (SettingsManager.ApplyScheduledAutoStartOffIfDue(settings, DateTime.Now))
             {
-                Logger.Info("Scheduler: one-time scheduled auto-start OFF applied during startup evaluation.");
+                Logger.Info("Scheduler: scheduled auto-start state transition applied during startup evaluation.");
                 _saveSettings(settings);
             }
 
@@ -111,7 +110,7 @@ namespace TeamsTrayStarter
             var settings = _getSettings();
             if (SettingsManager.ApplyScheduledAutoStartOffIfDue(settings, DateTime.Now))
             {
-                Logger.Info("Scheduler: one-time scheduled auto-start OFF applied during evaluation.");
+                Logger.Info("Scheduler: scheduled auto-start state transition applied during evaluation.");
                 _saveSettings(settings);
             }
 

@@ -6,7 +6,6 @@ namespace TeamsTrayStarter
 {
     public sealed class SettingsForm : Form
     {
-
         private readonly Label _daysHeaderLabel;
 
         private readonly CheckBox _monCheckBox;
@@ -94,7 +93,6 @@ namespace TeamsTrayStarter
 
         public SettingsForm(AppSettings current)
         {
-
             _file1Path = current.File1Path;
             _file2Path = current.File2Path;
             _file3Path = current.File3Path;
@@ -183,15 +181,26 @@ namespace TeamsTrayStarter
 
             int fileRowY = rightHeaderY + fileSectionLabelGap;
 
-            (_file1CheckBox, _file1TextBox, _file1BrowseButton) = CreateFileRow(1, "MS Teams", _file1Path, current.File1Enabled, fileRowY, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
-            (_file2CheckBox, _file2TextBox, _file2BrowseButton) = CreateFileRow(2, "MS Outlook", _file2Path, current.File2Enabled, fileRowY + fileRowGap, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
-            (_file3CheckBox, _file3TextBox, _file3BrowseButton) = CreateFileRow(3, "not yet selected", _file3Path, current.File3Enabled, fileRowY + fileRowGap * 2, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
-            (_file4CheckBox, _file4TextBox, _file4BrowseButton) = CreateFileRow(4, "not yet selected", _file4Path, current.File4Enabled, fileRowY + fileRowGap * 3, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
+            (_file1CheckBox, _file1TextBox, _file1BrowseButton) =
+                CreateFileRow(1, "MS Teams", _file1Path, current.File1Enabled, fileRowY,
+                    fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
+
+            (_file2CheckBox, _file2TextBox, _file2BrowseButton) =
+                CreateFileRow(2, "MS Outlook", _file2Path, current.File2Enabled, fileRowY + fileRowGap,
+                    fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
+
+            (_file3CheckBox, _file3TextBox, _file3BrowseButton) =
+                CreateFileRow(3, "not yet selected", _file3Path, current.File3Enabled, fileRowY + fileRowGap * 2,
+                    fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
+
+            (_file4CheckBox, _file4TextBox, _file4BrowseButton) =
+                CreateFileRow(4, "not yet selected", _file4Path, current.File4Enabled, fileRowY + fileRowGap * 3,
+                    fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
 
             _file1DefaultButton = CreateSecondaryButton("Default", fileActionX, fileRowY);
             _file2DefaultButton = CreateSecondaryButton("Default", fileActionX, fileRowY + fileRowGap);
-            _file3ClearButton   = CreateSecondaryButton("Clear", fileActionX, fileRowY + fileRowGap * 2);
-            _file4ClearButton   = CreateSecondaryButton("Clear", fileActionX, fileRowY + fileRowGap * 3);
+            _file3ClearButton = CreateSecondaryButton("Clear", fileActionX, fileRowY + fileRowGap * 2);
+            _file4ClearButton = CreateSecondaryButton("Clear", fileActionX, fileRowY + fileRowGap * 3);
 
             _file1DefaultButton.Width = fileActionWidth;
             _file2DefaultButton.Width = fileActionWidth;
@@ -244,14 +253,19 @@ namespace TeamsTrayStarter
             };
             Controls.Add(_autoStartOffFromCheckBox);
 
+            DateTime initialFromDate =
+                current.AutoStartOffFromDate.HasValue && current.AutoStartOffFromDate.Value.Date >= DateTime.Today
+                    ? current.AutoStartOffFromDate.Value.Date
+                    : DateTime.Today;
+
             _autoStartOffFromDatePicker = new DateTimePicker
             {
                 Format = DateTimePickerFormat.Custom,
                 CustomFormat = "dd/MM/yyyy",
                 Width = futureOffDateWidth,
                 Location = new Point(futureOffDateX, futureOffFromY),
-                MinDate = DateTime.Today.AddDays(1),
-                Value = current.AutoStartOffFromDate.HasValue && current.AutoStartOffFromDate.Value.Date > DateTime.Today ? current.AutoStartOffFromDate.Value.Date : DateTime.Today.AddDays(1),
+                MinDate = DateTime.Today,
+                Value = initialFromDate,
                 Enabled = current.AutoStartOffFromEnabled
             };
             Controls.Add(_autoStartOffFromDatePicker);
@@ -265,14 +279,18 @@ namespace TeamsTrayStarter
             };
             Controls.Add(_autoStartOffUntilCheckBox);
 
+            DateTime initialUntilMinDate = initialFromDate.AddDays(1);
+
             _autoStartOffUntilDatePicker = new DateTimePicker
             {
                 Format = DateTimePickerFormat.Custom,
                 CustomFormat = "dd/MM/yyyy",
                 Width = futureOffDateWidth,
                 Location = new Point(futureOffDateX, futureOffUntilY),
-                MinDate = DateTime.Today.AddDays(2),
-                Value = current.AutoStartOffUntilDate.HasValue && current.AutoStartOffUntilDate.Value.Date > DateTime.Today ? current.AutoStartOffUntilDate.Value.Date : DateTime.Today.AddDays(2),
+                MinDate = initialUntilMinDate,
+                Value = current.AutoStartOffUntilDate.HasValue && current.AutoStartOffUntilDate.Value.Date >= initialUntilMinDate
+                    ? current.AutoStartOffUntilDate.Value.Date
+                    : initialUntilMinDate,
                 Enabled = current.AutoStartOffFromEnabled && current.AutoStartOffUntilEnabled
             };
             Controls.Add(_autoStartOffUntilDatePicker);
@@ -313,7 +331,13 @@ namespace TeamsTrayStarter
             PerformLayout();
         }
 
-        private (CheckBox checkBox, DateTimePicker timePicker) CreateDayRow(string dayAbbrev, int checkX, int dayX, int timeX, int y, DayLaunchSetting currentDaySetting)
+        private (CheckBox checkBox, DateTimePicker timePicker) CreateDayRow(
+            string dayAbbrev,
+            int checkX,
+            int dayX,
+            int timeX,
+            int y,
+            DayLaunchSetting currentDaySetting)
         {
             var cb = new CheckBox
             {
@@ -366,6 +390,7 @@ namespace TeamsTrayStarter
             _autoStartOffCheckBox_CheckedChanged(null, EventArgs.Empty);
 
             _autoStartOffFromCheckBox.CheckedChanged += _autoStartOffCheckBox_CheckedChanged;
+
             _autoStartOffUntilCheckBox.CheckedChanged += (_, __) =>
             {
                 _autoStartOffUntilDatePicker.Enabled = _autoStartOffFromCheckBox.Checked && _autoStartOffUntilCheckBox.Checked;
@@ -374,6 +399,7 @@ namespace TeamsTrayStarter
             _autoStartOffFromDatePicker.ValueChanged += (_, __) =>
             {
                 _autoStartOffUntilDatePicker.MinDate = _autoStartOffFromDatePicker.Value.Date.AddDays(1);
+
                 if (_autoStartOffUntilDatePicker.Value.Date <= _autoStartOffFromDatePicker.Value.Date)
                 {
                     _autoStartOffUntilDatePicker.Value = _autoStartOffFromDatePicker.Value.Date.AddDays(1);
@@ -395,7 +421,17 @@ namespace TeamsTrayStarter
             checkBox.CheckedChanged += (_, __) => { textBox.Enabled = checkBox.Checked; };
         }
 
-        private (CheckBox checkBox, TextBox textBox, Button browseButton) CreateFileRow(int fileIndex, string defaultText, string? path, bool isChecked, int y, int checkX, int textX, int textWidth, int browseX, int browseWidth)
+        private (CheckBox checkBox, TextBox textBox, Button browseButton) CreateFileRow(
+            int fileIndex,
+            string defaultText,
+            string? path,
+            bool isChecked,
+            int y,
+            int checkX,
+            int textX,
+            int textWidth,
+            int browseX,
+            int browseWidth)
         {
             var cb = new CheckBox
             {
@@ -462,14 +498,17 @@ namespace TeamsTrayStarter
                     _file1Path = dlg.FileName;
                     _file1TextBox.Text = SettingsManager.GetFileLineText(1, _file1Path, "MS Teams");
                     break;
+
                 case 2:
                     _file2Path = dlg.FileName;
                     _file2TextBox.Text = SettingsManager.GetFileLineText(2, _file2Path, "MS Outlook");
                     break;
+
                 case 3:
                     _file3Path = dlg.FileName;
                     _file3TextBox.Text = SettingsManager.GetFileLineText(3, _file3Path, "not yet selected");
                     break;
+
                 case 4:
                     _file4Path = dlg.FileName;
                     _file4TextBox.Text = SettingsManager.GetFileLineText(4, _file4Path, "not yet selected");
@@ -543,21 +582,36 @@ namespace TeamsTrayStarter
         {
             if (_file3CheckBox.Checked && string.IsNullOrWhiteSpace(_file3Path))
             {
-                MessageBox.Show(this, "File 3 is selected, but no file has been chosen. Please browse for a file or uncheck File 3.", "Missing File 3", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(
+                    this,
+                    "File 3 is selected, but no file has been chosen. Please browse for a file or uncheck File 3.",
+                    "Missing File 3",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
                 return;
             }
 
             if (_file4CheckBox.Checked && string.IsNullOrWhiteSpace(_file4Path))
             {
-                MessageBox.Show(this, "File 4 is selected, but no file has been chosen. Please browse for a file or uncheck File 4.", "Missing File 4", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(
+                    this,
+                    "File 4 is selected, but no file has been chosen. Please browse for a file or uncheck File 4.",
+                    "Missing File 4",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
                 return;
             }
 
             if (_autoStartOffFromCheckBox.Checked)
             {
-                if (_autoStartOffFromDatePicker.Value.Date <= DateTime.Today)
+                if (_autoStartOffFromDatePicker.Value.Date < DateTime.Today)
                 {
-                    MessageBox.Show(this, "The start date must be in the future.", "Invalid start date", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(
+                        this,
+                        "The start date cannot be in the past.",
+                        "Invalid start date",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
                     return;
                 }
 
@@ -565,7 +619,12 @@ namespace TeamsTrayStarter
                 {
                     if (_autoStartOffUntilDatePicker.Value.Date <= _autoStartOffFromDatePicker.Value.Date)
                     {
-                        MessageBox.Show(this, "The 'Turn auto-start OFF until' date must be later than the 'from' date.", "Invalid end date", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show(
+                            this,
+                            "The 'Turn auto-start OFF until' date must be later than the 'from' date.",
+                            "Invalid end date",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
                         return;
                     }
                 }
@@ -589,6 +648,7 @@ namespace TeamsTrayStarter
 
             AutoStartOffFromEnabled = _autoStartOffFromCheckBox.Checked;
             AutoStartOffFromDate = _autoStartOffFromCheckBox.Checked ? _autoStartOffFromDatePicker.Value.Date : null;
+
             AutoStartOffUntilEnabled = _autoStartOffUntilCheckBox.Checked;
             AutoStartOffUntilDate = (_autoStartOffFromCheckBox.Checked && _autoStartOffUntilCheckBox.Checked)
                 ? _autoStartOffUntilDatePicker.Value.Date

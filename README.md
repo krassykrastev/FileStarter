@@ -1,6 +1,5 @@
 [FileStarter 1.6.zip](https://github.com/user-attachments/files/28188921/FileStarter.1.6.zip)
 
-FileStarter v1.6
 24 May 2026
 
 🚀 FileStarter is a lightweight Windows tray application that automatically launches apps or files based on a configurable schedule. It is designed to be simple, reliable, and unobtrusive — perfect for automating your daily startup routine.

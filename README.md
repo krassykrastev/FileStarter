@@ -23,7 +23,7 @@
 - You can fully control behavior via the Settings menu
 
 
-⚙️ Installation: No installation required. Download the .zip file, extract it anywhere you like, then run the .exe or place a shortcut on your desktop and run it from there. Windows may show a message that the app is not digitally signed. This is normal, as I don't have a way to digitally sign the app. If this happens click on "More info -> Run anyway" 
+⚙️ Installation: No installation required. Download the .zip file, extract it anywhere you like, then run the .exe or place a shortcut on your desktop and run it from there. Windows may show a message that the app is not digitally signed. This is normal, as I don't have a code signing certificate  (which requires annual subscription) , so I can't digitally sign the app. If this happens click on "More info -> Run anyway" 
 
 
 🖥 Usage: 

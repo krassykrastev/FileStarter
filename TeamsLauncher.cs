@@ -44,11 +44,11 @@ namespace TeamsTrayStarter
                 var result = await TryLaunchSlotWithRetryAsync(settings.File1Path, SlotKind.TeamsDefault);
                 if (result.Launched)
                 {
-                    launchedNames.Add(SettingsManager.GetDisplayNameFromPath(settings.File1Path, "MS Teams", 100));
+                    launchedNames.Add(SettingsManager.GetSlotDisplayName(1, settings.File1Path, 100));
                 }
                 else if (result.Failed)
                 {
-                    failedNames.Add(SettingsManager.GetDisplayNameFromPath(settings.File1Path, "MS Teams", 100));
+                    failedNames.Add(SettingsManager.GetSlotDisplayName(1, settings.File1Path, 100));
                 }
 
                 hasAnyLaterEnabled = settings.File2Enabled || settings.File3Enabled || settings.File4Enabled;
@@ -61,11 +61,11 @@ namespace TeamsTrayStarter
                 var result = await TryLaunchSlotWithRetryAsync(settings.File2Path, SlotKind.OutlookDefault);
                 if (result.Launched)
                 {
-                    launchedNames.Add(SettingsManager.GetDisplayNameFromPath(settings.File2Path, "MS Outlook", 100));
+                    launchedNames.Add(SettingsManager.GetSlotDisplayName(2, settings.File2Path, 100));
                 }
                 else if (result.Failed)
                 {
-                    failedNames.Add(SettingsManager.GetDisplayNameFromPath(settings.File2Path, "MS Outlook", 100));
+                    failedNames.Add(SettingsManager.GetSlotDisplayName(2, settings.File2Path, 100));
                 }
 
                 hasAnyLaterEnabled = settings.File3Enabled || settings.File4Enabled;
@@ -78,11 +78,11 @@ namespace TeamsTrayStarter
                 var result = await TryLaunchSlotWithRetryAsync(settings.File3Path, SlotKind.CustomOnly);
                 if (result.Launched)
                 {
-                    launchedNames.Add(SettingsManager.GetDisplayNameFromPath(settings.File3Path, "File 3", 100));
+                    launchedNames.Add(SettingsManager.GetSlotDisplayName(3, settings.File3Path, 100));
                 }
                 else if (result.Failed)
                 {
-                    failedNames.Add(SettingsManager.GetDisplayNameFromPath(settings.File3Path, "File 3", 100));
+                    failedNames.Add(SettingsManager.GetSlotDisplayName(3, settings.File3Path, 100));
                 }
 
                 hasAnyLaterEnabled = settings.File4Enabled;
@@ -95,11 +95,11 @@ namespace TeamsTrayStarter
                 var result = await TryLaunchSlotWithRetryAsync(settings.File4Path, SlotKind.CustomOnly);
                 if (result.Launched)
                 {
-                    launchedNames.Add(SettingsManager.GetDisplayNameFromPath(settings.File4Path, "File 4", 100));
+                    launchedNames.Add(SettingsManager.GetSlotDisplayName(4, settings.File4Path, 100));
                 }
                 else if (result.Failed)
                 {
-                    failedNames.Add(SettingsManager.GetDisplayNameFromPath(settings.File4Path, "File 4", 100));
+                    failedNames.Add(SettingsManager.GetSlotDisplayName(4, settings.File4Path, 100));
                 }
             }
 
@@ -181,6 +181,7 @@ namespace TeamsTrayStarter
                             FileName = targetPath,
                             UseShellExecute = true
                         });
+
                         Logger.Info($"TryLaunchCustomTarget: launch issued for {targetPath} (attempt {attempt}).");
 
                         if (isExe)
@@ -223,7 +224,6 @@ namespace TeamsTrayStarter
         private async Task<LaunchAttemptResult> TryLaunchDefaultTeamsWithRetryAsync()
         {
             Exception? lastEx = null;
-
             for (int attempt = 1; attempt <= MaxLaunchAttempts; attempt++)
             {
                 if (IsTeamsRunning())
@@ -278,7 +278,6 @@ namespace TeamsTrayStarter
         private async Task<LaunchAttemptResult> TryLaunchDefaultOutlookWithRetryAsync()
         {
             Exception? lastEx = null;
-
             for (int attempt = 1; attempt <= MaxLaunchAttempts; attempt++)
             {
                 if (IsOutlookRunning())

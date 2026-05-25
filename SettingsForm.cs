@@ -162,10 +162,10 @@ namespace TeamsTrayStarter
             Controls.Add(selectFilesLabel);
 
             int fileRowY = rightHeaderY + fileSectionLabelGap;
-            (_file1CheckBox, _file1TextBox, _file1BrowseButton) = CreateFileRow(1, "MS Teams", _file1Path, current.File1Enabled, fileRowY, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
-            (_file2CheckBox, _file2TextBox, _file2BrowseButton) = CreateFileRow(2, "MS Outlook", _file2Path, current.File2Enabled, fileRowY + fileRowGap, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
-            (_file3CheckBox, _file3TextBox, _file3BrowseButton) = CreateFileRow(3, "not yet selected", _file3Path, current.File3Enabled, fileRowY + fileRowGap * 2, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
-            (_file4CheckBox, _file4TextBox, _file4BrowseButton) = CreateFileRow(4, "not yet selected", _file4Path, current.File4Enabled, fileRowY + fileRowGap * 3, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
+            (_file1CheckBox, _file1TextBox, _file1BrowseButton) = CreateFileRow(1, _file1Path, current.File1Enabled, fileRowY, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
+            (_file2CheckBox, _file2TextBox, _file2BrowseButton) = CreateFileRow(2, _file2Path, current.File2Enabled, fileRowY + fileRowGap, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
+            (_file3CheckBox, _file3TextBox, _file3BrowseButton) = CreateFileRow(3, _file3Path, current.File3Enabled, fileRowY + fileRowGap * 2, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
+            (_file4CheckBox, _file4TextBox, _file4BrowseButton) = CreateFileRow(4, _file4Path, current.File4Enabled, fileRowY + fileRowGap * 3, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
 
             _file1DefaultButton = CreateSecondaryButton("Default", fileActionX, fileRowY);
             _file2DefaultButton = CreateSecondaryButton("Default", fileActionX, fileRowY + fileRowGap);
@@ -249,7 +249,6 @@ namespace TeamsTrayStarter
             Controls.Add(_autoStartOffUntilCheckBox);
 
             DateTime initialUntilMinDate = initialFromDate;
-
             _autoStartOffUntilDatePicker = new DateTimePicker
             {
                 Format = DateTimePickerFormat.Custom,
@@ -373,7 +372,7 @@ namespace TeamsTrayStarter
             checkBox.CheckedChanged += (_, __) => { textBox.Enabled = checkBox.Checked; };
         }
 
-        private (CheckBox checkBox, TextBox textBox, Button browseButton) CreateFileRow(int fileIndex, string defaultText, string? path, bool isChecked, int y, int checkX, int textX, int textWidth, int browseX, int browseWidth)
+        private (CheckBox checkBox, TextBox textBox, Button browseButton) CreateFileRow(int fileIndex, string? path, bool isChecked, int y, int checkX, int textX, int textWidth, int browseX, int browseWidth)
         {
             var cb = new CheckBox
             {
@@ -390,7 +389,7 @@ namespace TeamsTrayStarter
                 BackColor = BackColor,
                 BorderStyle = BorderStyle.None,
                 Cursor = Cursors.Default,
-                Text = SettingsManager.GetFileLineText(fileIndex, path, defaultText)
+                Text = SettingsManager.GetFileLineText(fileIndex, path)
             };
             var browse = new Button
             {
@@ -421,7 +420,7 @@ namespace TeamsTrayStarter
         {
             using var dlg = new OpenFileDialog
             {
-                Title = $"Select file for File {fileIndex}",
+                Title = $"Select file for {SettingsManager.GetSlotLabel(fileIndex)}",
                 Filter = "All files (*.*)|*.*",
                 CheckFileExists = true,
                 Multiselect = false
@@ -432,19 +431,19 @@ namespace TeamsTrayStarter
             {
                 case 1:
                     _file1Path = dlg.FileName;
-                    _file1TextBox.Text = SettingsManager.GetFileLineText(1, _file1Path, "MS Teams");
+                    _file1TextBox.Text = SettingsManager.GetFileLineText(1, _file1Path);
                     break;
                 case 2:
                     _file2Path = dlg.FileName;
-                    _file2TextBox.Text = SettingsManager.GetFileLineText(2, _file2Path, "MS Outlook");
+                    _file2TextBox.Text = SettingsManager.GetFileLineText(2, _file2Path);
                     break;
                 case 3:
                     _file3Path = dlg.FileName;
-                    _file3TextBox.Text = SettingsManager.GetFileLineText(3, _file3Path, "not yet selected");
+                    _file3TextBox.Text = SettingsManager.GetFileLineText(3, _file3Path);
                     break;
                 case 4:
                     _file4Path = dlg.FileName;
-                    _file4TextBox.Text = SettingsManager.GetFileLineText(4, _file4Path, "not yet selected");
+                    _file4TextBox.Text = SettingsManager.GetFileLineText(4, _file4Path);
                     break;
             }
             UpdateFileActionButtonStates();
@@ -453,21 +452,21 @@ namespace TeamsTrayStarter
         private void RestoreFile1Default()
         {
             _file1Path = null;
-            _file1TextBox.Text = SettingsManager.GetFileLineText(1, _file1Path, "MS Teams");
+            _file1TextBox.Text = SettingsManager.GetFileLineText(1, _file1Path);
             UpdateFileActionButtonStates();
         }
 
         private void RestoreFile2Default()
         {
             _file2Path = null;
-            _file2TextBox.Text = SettingsManager.GetFileLineText(2, _file2Path, "MS Outlook");
+            _file2TextBox.Text = SettingsManager.GetFileLineText(2, _file2Path);
             UpdateFileActionButtonStates();
         }
 
         private void ClearFile3()
         {
             _file3Path = null;
-            _file3TextBox.Text = SettingsManager.GetFileLineText(3, _file3Path, "not yet selected");
+            _file3TextBox.Text = SettingsManager.GetFileLineText(3, _file3Path);
             _file3CheckBox.Checked = false;
             UpdateFileActionButtonStates();
         }
@@ -475,7 +474,7 @@ namespace TeamsTrayStarter
         private void ClearFile4()
         {
             _file4Path = null;
-            _file4TextBox.Text = SettingsManager.GetFileLineText(4, _file4Path, "not yet selected");
+            _file4TextBox.Text = SettingsManager.GetFileLineText(4, _file4Path);
             _file4CheckBox.Checked = false;
             UpdateFileActionButtonStates();
         }
@@ -509,18 +508,18 @@ namespace TeamsTrayStarter
             }
         }
 
-        private bool ValidateCustomPathExists(string slotName, string? path)
+        private bool ValidateCustomPathExists(int fileIndex, string? path)
         {
             if (string.IsNullOrWhiteSpace(path))
                 return true;
-
             if (File.Exists(path))
                 return true;
 
+            string slotLabel = SettingsManager.GetSlotLabel(fileIndex);
             MessageBox.Show(
                 this,
-                $"{slotName} has a custom path selected, but the file no longer exists. Please browse for a valid file or restore the default path.",
-                $"Missing {slotName} file",
+                $"{slotLabel} has a custom path selected, but the file no longer exists. Please browse for a valid file or restore the default path.",
+                $"Missing {slotLabel} file",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
             return false;
@@ -530,22 +529,22 @@ namespace TeamsTrayStarter
         {
             if (_file3CheckBox.Checked && string.IsNullOrWhiteSpace(_file3Path))
             {
-                MessageBox.Show(this, "File 3 is selected, but no file has been chosen. Please browse for a file or uncheck File 3.", "Missing File 3", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, $"{SettingsManager.GetSlotLabel(3)} is selected, but no file has been chosen. Please browse for a file or uncheck {SettingsManager.GetSlotLabel(3)}.", "Missing File 3", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             if (_file4CheckBox.Checked && string.IsNullOrWhiteSpace(_file4Path))
             {
-                MessageBox.Show(this, "File 4 is selected, but no file has been chosen. Please browse for a file or uncheck File 4.", "Missing File 4", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, $"{SettingsManager.GetSlotLabel(4)} is selected, but no file has been chosen. Please browse for a file or uncheck {SettingsManager.GetSlotLabel(4)}.", "Missing File 4", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            if (!ValidateCustomPathExists("File 1", _file1Path))
+            if (!ValidateCustomPathExists(1, _file1Path))
                 return;
-            if (!ValidateCustomPathExists("File 2", _file2Path))
+            if (!ValidateCustomPathExists(2, _file2Path))
                 return;
-            if (!ValidateCustomPathExists("File 3", _file3Path))
+            if (!ValidateCustomPathExists(3, _file3Path))
                 return;
-            if (!ValidateCustomPathExists("File 4", _file4Path))
+            if (!ValidateCustomPathExists(4, _file4Path))
                 return;
 
             if (_autoStartOffFromCheckBox.Checked)

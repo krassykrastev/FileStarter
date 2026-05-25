@@ -1,4 +1,3 @@
-
 using System;
 using System.IO;
 using System.Text.Json;
@@ -106,12 +105,45 @@ namespace TeamsTrayStarter
             return fallbackText.Trim();
         }
 
-        public static string GetFileLineText(int fileIndex, string? path, string fallbackText)
+        public static string GetSlotLabel(int fileIndex)
         {
-            return $"File {fileIndex}: {GetDisplayNameFromPath(path, fallbackText)}";
+            return fileIndex switch
+            {
+                1 => "File 1",
+                2 => "File 2",
+                3 => "File 3",
+                4 => "File 4",
+                _ => $"File {fileIndex}"
+            };
         }
 
-        
+        public static string GetSlotDefaultText(int fileIndex)
+        {
+            return fileIndex switch
+            {
+                1 => "MS Teams",
+                2 => "MS Outlook",
+                3 => "not yet selected",
+                4 => "not yet selected",
+                _ => "not yet selected"
+            };
+        }
+
+        public static string GetSlotDisplayName(int fileIndex, string? path, int maxLength = 12)
+        {
+            return GetDisplayNameFromPath(path, GetSlotDefaultText(fileIndex), maxLength);
+        }
+
+        public static string GetFileLineText(int fileIndex, string? path, string fallbackText)
+        {
+            return $"{GetSlotLabel(fileIndex)}: {GetDisplayNameFromPath(path, fallbackText)}";
+        }
+
+        public static string GetFileLineText(int fileIndex, string? path)
+        {
+            return $"{GetSlotLabel(fileIndex)}: {GetSlotDisplayName(fileIndex, path)}";
+        }
+
         public static bool IsAutoStartPausedByDate(AppSettings s, DateTime nowLocal)
         {
             if (!s.AutoStartOffFromEnabled || s.AutoStartOffFromDate == null)
@@ -119,7 +151,6 @@ namespace TeamsTrayStarter
 
             DateTime today = nowLocal.Date;
             DateTime start = s.AutoStartOffFromDate.Value.Date;
-
             if (today < start)
                 return false;
 
@@ -127,11 +158,9 @@ namespace TeamsTrayStarter
                 return false;
 
             DateTime end = s.AutoStartOffUntilDate.Value.Date;
-
-            // Vacation mode is active from start date through end date inclusive
             return today <= end;
         }
-  
+
         public static bool ApplyScheduledAutoStartOffIfDue(AppSettings s, DateTime nowLocal)
         {
             if (!s.AutoStartOffFromEnabled || s.AutoStartOffFromDate == null)
@@ -140,36 +169,22 @@ namespace TeamsTrayStarter
             DateTime today = nowLocal.Date;
             DateTime start = s.AutoStartOffFromDate.Value.Date;
 
-            // CASE 1:
-            // Vacation mode has BOTH start and end dates
             if (s.AutoStartOffUntilEnabled && s.AutoStartOffUntilDate != null)
             {
                 DateTime end = s.AutoStartOffUntilDate.Value.Date;
-
-                // Before the vacation period starts -> do nothing
                 if (today < start)
                     return false;
-
-                // During vacation period (inclusive) -> do nothing here
-                // Auto-start remains paused via IsAutoStartPausedByDate(...)
                 if (today <= end)
                     return false;
 
-                // Vacation has ended (today is AFTER the end date)
-                // -> turn vacation mode off and switch auto-start back on
                 s.AutoStartOffFromEnabled = false;
                 s.AutoStartOffFromDate = null;
                 s.AutoStartOffUntilEnabled = false;
                 s.AutoStartOffUntilDate = null;
-
                 s.AutoStartTeamsEnabled = true;
-
                 return true;
             }
 
-            // CASE 2:
-            // Only "Turn auto-start OFF from" is checked (no "until" date)
-            // Keep your existing one-time OFF behavior
             if (today < start)
                 return false;
 
@@ -182,7 +197,6 @@ namespace TeamsTrayStarter
             s.AutoStartOffFromDate = null;
             s.AutoStartOffUntilEnabled = false;
             s.AutoStartOffUntilDate = null;
-
             return true;
         }
 
@@ -219,13 +233,10 @@ namespace TeamsTrayStarter
 
         public bool File1Enabled { get; set; } = true;
         public string? File1Path { get; set; } = null;
-
         public bool File2Enabled { get; set; } = false;
         public string? File2Path { get; set; } = null;
-
         public bool File3Enabled { get; set; } = false;
         public string? File3Path { get; set; } = null;
-
         public bool File4Enabled { get; set; } = false;
         public string? File4Path { get; set; } = null;
 

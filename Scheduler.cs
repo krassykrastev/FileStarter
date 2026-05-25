@@ -1,4 +1,3 @@
-
 using System;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -24,7 +23,6 @@ namespace TeamsTrayStarter
             _getSettings = getSettings;
             _saveSettings = saveSettings;
             _notify = notify;
-
             _timer = new System.Windows.Forms.Timer();
             _timer.Tick += (_, __) =>
             {
@@ -37,7 +35,6 @@ namespace TeamsTrayStarter
         public void StartOrReschedule()
         {
             _timer.Stop();
-
             var settings = _getSettings();
             var now = DateTime.Now;
 
@@ -65,7 +62,6 @@ namespace TeamsTrayStarter
 
             DateTime? nextLaunch = GetNextActionTime(now, settings);
             DateTime? nextEvaluation = GetEarlier(nextLaunch, nextVacationTransition);
-
             if (nextEvaluation == null)
             {
                 Logger.Info("Scheduler: no selected days to schedule.");
@@ -73,8 +69,6 @@ namespace TeamsTrayStarter
             }
 
             ScheduleTimerTo(nextEvaluation.Value, now, "Scheduler: next evaluation");
-
-            // If user logs in after today's scheduled time, launch immediately
             EvaluateAtStartupIfNeeded();
         }
 
@@ -86,10 +80,8 @@ namespace TeamsTrayStarter
                 Logger.Info("Scheduler: scheduled auto-start state transition applied during startup evaluation.");
                 _saveSettings(settings);
             }
-
             if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, DateTime.Now))
                 return;
-
             if (_launchInProgress)
                 return;
 
@@ -117,13 +109,11 @@ namespace TeamsTrayStarter
                 Logger.Info("Scheduler: scheduled auto-start state transition applied during evaluation.");
                 _saveSettings(settings);
             }
-
             if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, DateTime.Now))
             {
                 Logger.Info("Evaluate: auto-start disabled. Skipping.");
                 return;
             }
-
             if (_launchInProgress)
             {
                 Logger.Info("Evaluate: launch already in progress. Skipping.");

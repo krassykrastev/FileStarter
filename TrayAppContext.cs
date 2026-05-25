@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
@@ -126,6 +129,7 @@ namespace TeamsTrayStarter
                 ShowBalloon("FileStarter", "Could not set Run at startup. See log for details.", ToolTipIcon.Warning);
             }
 
+            RunStartupHealthCheck();
             UpdateTrayUi();
             _scheduler.StartOrReschedule();
         }
@@ -196,6 +200,36 @@ namespace TeamsTrayStarter
             return text.Length <= NotifyIconTextMaxLength
                 ? text
                 : text.Substring(0, NotifyIconTextMaxLength);
+        }
+
+        private void RunStartupHealthCheck()
+        {
+            var missingSlots = GetMissingEnabledCustomSlots(_settings).ToList();
+            if (missingSlots.Count == 0)
+                return;
+
+            foreach (var slot in missingSlots)
+            {
+                Logger.Warn($"Startup health check: {slot} has a selected custom path that no longer exists.");
+            }
+
+            string message = missingSlots.Count == 1
+                ? $"Startup warning: {missingSlots[0]} custom path is missing."
+                : $"Startup warning: {missingSlots.Count} selected custom files are missing.";
+
+            ShowBalloon("FileStarter", message, ToolTipIcon.Warning);
+        }
+
+        private static IEnumerable<string> GetMissingEnabledCustomSlots(AppSettings settings)
+        {
+            if (settings.File1Enabled && !string.IsNullOrWhiteSpace(settings.File1Path) && !File.Exists(settings.File1Path))
+                yield return SettingsManager.GetSlotLabel(1);
+            if (settings.File2Enabled && !string.IsNullOrWhiteSpace(settings.File2Path) && !File.Exists(settings.File2Path))
+                yield return SettingsManager.GetSlotLabel(2);
+            if (settings.File3Enabled && !string.IsNullOrWhiteSpace(settings.File3Path) && !File.Exists(settings.File3Path))
+                yield return SettingsManager.GetSlotLabel(3);
+            if (settings.File4Enabled && !string.IsNullOrWhiteSpace(settings.File4Path) && !File.Exists(settings.File4Path))
+                yield return SettingsManager.GetSlotLabel(4);
         }
 
         private void ToggleAutoStartMaster()
@@ -316,12 +350,10 @@ namespace TeamsTrayStarter
                     if (_settingsForm != null && _settingsForm.Accepted)
                     {
                         ApplySettingsFromForm(_settingsForm);
-
                         if (SettingsManager.ApplyScheduledAutoStartOffIfDue(_settings, DateTime.Now))
                         {
                             Logger.Info("TrayAppContext: one-time scheduled auto-start OFF applied after saving settings.");
                         }
-
                         SettingsManager.Save(_settings);
                         Logger.Info("Settings updated successfully.");
                         UpdateTrayUi();
@@ -389,8 +421,8 @@ namespace TeamsTrayStarter
             try
             {
                 var path = Logger.LogFilePath;
-                if (!System.IO.File.Exists(path))
-                    System.IO.File.WriteAllText(path, "Log created.");
+                if (!File.Exists(path))
+                    File.WriteAllText(path, "Log created.");
                 if (_logViewerProcess != null && !_logViewerProcess.HasExited)
                 {
                     try

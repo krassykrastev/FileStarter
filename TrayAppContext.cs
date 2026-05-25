@@ -1,4 +1,3 @@
-
 using System;
 using System.Diagnostics;
 using System.Windows.Forms;
@@ -18,7 +17,6 @@ namespace TeamsTrayStarter
         private readonly ToolStripMenuItem _helpItem;
         private readonly ToolStripMenuItem _aboutItem;
         private readonly ToolStripMenuItem _exitItem;
-
         private readonly Scheduler _scheduler;
         private readonly TeamsLauncher _teamsLauncher;
 
@@ -27,7 +25,6 @@ namespace TeamsTrayStarter
 
         private AppSettings _settings;
         private System.Drawing.Icon? _currentIcon;
-
         private SettingsForm? _settingsForm;
         private AboutForm? _aboutForm;
         private Process? _logViewerProcess;
@@ -35,6 +32,7 @@ namespace TeamsTrayStarter
 
         private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
         private const string RunValueName = "FileStarter";
+        private const int NotifyIconTextMaxLength = 63;
 
         public TrayAppContext()
         {
@@ -141,7 +139,6 @@ namespace TeamsTrayStarter
         {
             if (e.Button != MouseButtons.Left)
                 return;
-
             _singleLeftClickTimer.Stop();
             _singleLeftClickTimer.Start();
         }
@@ -150,7 +147,6 @@ namespace TeamsTrayStarter
         {
             if (e.Button != MouseButtons.Left)
                 return;
-
             _singleLeftClickTimer.Stop();
             OpenSettings();
         }
@@ -170,7 +166,6 @@ namespace TeamsTrayStarter
             }
 
             bool effectiveAutoStart = SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now);
-
             _autoStartToggleItem.Checked = effectiveAutoStart;
             _autoStartToggleItem.Text = effectiveAutoStart
                 ? "Auto-start ON"
@@ -183,19 +178,45 @@ namespace TeamsTrayStarter
             const int trayIconSize = 32;
             _currentIcon = TrayIconFactory.CreateSemaphoreIcon(effectiveAutoStart, trayIconSize);
             _trayIcon.Icon = _currentIcon;
+            _trayIcon.Text = GetTrayHoverText(DateTime.Now, _settings);
+        }
 
-            _trayIcon.Text = effectiveAutoStart
-                ? "Auto-start ON"
-                : "Auto-start OFF";
+        private static string GetTrayHoverText(DateTime now, AppSettings settings)
+        {
+            string text;
+
+            bool vacationActive = SettingsManager.IsAutoStartPausedByDate(settings, now);
+            if (vacationActive && settings.AutoStartOffUntilEnabled && settings.AutoStartOffUntilDate != null)
+            {
+                text = $"Auto-start OFF until {settings.AutoStartOffUntilDate.Value:dd/MM/yyyy}";
+            }
+            else if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, now))
+            {
+                text = "Auto-start OFF";
+            }
+            else
+            {
+                var next = Scheduler.GetNextActionTime(now, settings);
+                if (next != null)
+                {
+                    text = $"Auto-start ON, next {next.Value:ddd dd/MM HH:mm}";
+                }
+                else
+                {
+                    text = "Auto-start ON";
+                }
+            }
+
+            return text.Length <= NotifyIconTextMaxLength
+                ? text
+                : text.Substring(0, NotifyIconTextMaxLength);
         }
 
         private void ToggleAutoStartMaster()
         {
             _settings.AutoStartTeamsEnabled = !_settings.AutoStartTeamsEnabled;
             SettingsManager.Save(_settings);
-
             Logger.Info($"Auto-start toggled to: {_settings.AutoStartTeamsEnabled}");
-
             UpdateTrayUi();
             _scheduler.StartOrReschedule();
         }
@@ -213,7 +234,6 @@ namespace TeamsTrayStarter
                 {
                     DisableRunAtLogin();
                 }
-
                 Logger.Info($"Run-at-startup toggled to: {_settings.RunAppAtStartup}");
                 SettingsManager.Save(_settings);
                 UpdateTrayUi();
@@ -230,13 +250,11 @@ namespace TeamsTrayStarter
             var exePath = Environment.ProcessPath;
             if (string.IsNullOrWhiteSpace(exePath))
                 throw new InvalidOperationException("Cannot determine executable path.");
-
             var command = $"\"{exePath}\"";
             using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: true)
                           ?? Registry.CurrentUser.CreateSubKey(RunKeyPath, writable: true);
             if (key == null)
                 throw new InvalidOperationException("Cannot open HKCU Run key.");
-
             key.SetValue(RunValueName, command, RegistryValueKind.String);
         }
 
@@ -271,7 +289,6 @@ namespace TeamsTrayStarter
                     ShowOrActivateForm(_settingsForm);
                     return;
                 }
-
                 _settingsForm = new SettingsForm(_settings);
                 _settingsForm.FormClosed += (_, __) =>
                 {
@@ -291,12 +308,10 @@ namespace TeamsTrayStarter
                         _settings.Sat.Time = _settingsForm.SatTimeHHmm;
                         _settings.Sun.Enabled = _settingsForm.SunEnabled;
                         _settings.Sun.Time = _settingsForm.SunTimeHHmm;
-
                         _settings.AutoStartOffFromEnabled = _settingsForm.AutoStartOffFromEnabled;
                         _settings.AutoStartOffFromDate = _settingsForm.AutoStartOffFromDate;
                         _settings.AutoStartOffUntilEnabled = _settingsForm.AutoStartOffUntilEnabled;
                         _settings.AutoStartOffUntilDate = _settingsForm.AutoStartOffUntilDate;
-
                         _settings.File1Enabled = _settingsForm.File1Enabled;
                         _settings.File1Path = _settingsForm.File1Path;
                         _settings.File2Enabled = _settingsForm.File2Enabled;
@@ -305,21 +320,17 @@ namespace TeamsTrayStarter
                         _settings.File3Path = _settingsForm.File3Path;
                         _settings.File4Enabled = _settingsForm.File4Enabled;
                         _settings.File4Path = _settingsForm.File4Path;
-
                         if (SettingsManager.ApplyScheduledAutoStartOffIfDue(_settings, DateTime.Now))
                         {
                             Logger.Info("TrayAppContext: one-time scheduled auto-start OFF applied after saving settings.");
                         }
-
                         SettingsManager.Save(_settings);
                         Logger.Info("Settings updated successfully.");
                         UpdateTrayUi();
                         _scheduler.StartOrReschedule();
                     }
-
                     _settingsForm = null;
                 };
-
                 _settingsForm.Show();
                 _settingsForm.BringToFront();
                 _settingsForm.Activate();
@@ -340,7 +351,6 @@ namespace TeamsTrayStarter
                     ShowOrActivateForm(_helpForm);
                     return;
                 }
-
                 _helpForm = new HelpForm();
                 _helpForm.FormClosed += (_, __) => _helpForm = null;
                 _helpForm.Show();
@@ -363,7 +373,6 @@ namespace TeamsTrayStarter
                     ShowOrActivateForm(_aboutForm);
                     return;
                 }
-
                 _aboutForm = new AboutForm();
                 _aboutForm.FormClosed += (_, __) => _aboutForm = null;
                 _aboutForm.Show();
@@ -383,7 +392,6 @@ namespace TeamsTrayStarter
                 var path = Logger.LogFilePath;
                 if (!System.IO.File.Exists(path))
                     System.IO.File.WriteAllText(path, "Log created.");
-
                 if (_logViewerProcess != null && !_logViewerProcess.HasExited)
                 {
                     try
@@ -401,7 +409,6 @@ namespace TeamsTrayStarter
                         // ignore and reopen if needed
                     }
                 }
-
                 _logViewerProcess = Process.Start(new ProcessStartInfo
                 {
                     FileName = path,

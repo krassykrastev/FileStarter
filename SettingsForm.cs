@@ -1,3 +1,4 @@
+
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -7,7 +8,6 @@ namespace TeamsTrayStarter
     public sealed class SettingsForm : Form
     {
         private readonly Label _daysHeaderLabel;
-
         private readonly CheckBox _monCheckBox;
         private readonly CheckBox _tueCheckBox;
         private readonly CheckBox _wedCheckBox;
@@ -15,7 +15,6 @@ namespace TeamsTrayStarter
         private readonly CheckBox _friCheckBox;
         private readonly CheckBox _satCheckBox;
         private readonly CheckBox _sunCheckBox;
-
         private readonly DateTimePicker _monTimePicker;
         private readonly DateTimePicker _tueTimePicker;
         private readonly DateTimePicker _wedTimePicker;
@@ -23,43 +22,35 @@ namespace TeamsTrayStarter
         private readonly DateTimePicker _friTimePicker;
         private readonly DateTimePicker _satTimePicker;
         private readonly DateTimePicker _sunTimePicker;
-
         private readonly Label _vacationModeLabel;
         private readonly CheckBox _autoStartOffFromCheckBox;
         private readonly DateTimePicker _autoStartOffFromDatePicker;
         private readonly CheckBox _autoStartOffUntilCheckBox;
         private readonly DateTimePicker _autoStartOffUntilDatePicker;
-
         private readonly CheckBox _file1CheckBox;
         private readonly CheckBox _file2CheckBox;
         private readonly CheckBox _file3CheckBox;
         private readonly CheckBox _file4CheckBox;
-
         private readonly TextBox _file1TextBox;
         private readonly TextBox _file2TextBox;
         private readonly TextBox _file3TextBox;
         private readonly TextBox _file4TextBox;
-
         private readonly Button _file1BrowseButton;
         private readonly Button _file2BrowseButton;
         private readonly Button _file3BrowseButton;
         private readonly Button _file4BrowseButton;
-
         private readonly Button _file1DefaultButton;
         private readonly Button _file2DefaultButton;
         private readonly Button _file3ClearButton;
         private readonly Button _file4ClearButton;
-
         private readonly Button _okButton;
         private readonly Button _cancelButton;
-
         private string? _file1Path;
         private string? _file2Path;
         private string? _file3Path;
         private string? _file4Path;
 
         public bool Accepted { get; private set; } = false;
-
         public bool MonEnabled { get; private set; }
         public bool TueEnabled { get; private set; }
         public bool WedEnabled { get; private set; }
@@ -67,7 +58,6 @@ namespace TeamsTrayStarter
         public bool FriEnabled { get; private set; }
         public bool SatEnabled { get; private set; }
         public bool SunEnabled { get; private set; }
-
         public string MonTimeHHmm { get; private set; } = "09:00";
         public string TueTimeHHmm { get; private set; } = "09:00";
         public string WedTimeHHmm { get; private set; } = "09:00";
@@ -75,17 +65,14 @@ namespace TeamsTrayStarter
         public string FriTimeHHmm { get; private set; } = "09:00";
         public string SatTimeHHmm { get; private set; } = "09:00";
         public string SunTimeHHmm { get; private set; } = "09:00";
-
         public bool AutoStartOffFromEnabled { get; private set; }
         public DateTime? AutoStartOffFromDate { get; private set; }
         public bool AutoStartOffUntilEnabled { get; private set; }
         public DateTime? AutoStartOffUntilDate { get; private set; }
-
         public bool File1Enabled { get; private set; }
         public bool File2Enabled { get; private set; }
         public bool File3Enabled { get; private set; }
         public bool File4Enabled { get; private set; }
-
         public string? File1Path { get; private set; }
         public string? File2Path { get; private set; }
         public string? File3Path { get; private set; }
@@ -113,16 +100,13 @@ namespace TeamsTrayStarter
 
             const int leftMargin = 16;
             const int topHeaderY = 16;
-
             const int dayCheckX = 20;
             const int dayLabelX = 48;
             const int dayTimeX = 100;
             const int dayRowStartY = 52;
             const int dayRowGap = 36;
-
             const int rightColumnX = 240;
             const int rightHeaderY = topHeaderY;
-
             const int fileSectionLabelGap = 32;
             const int fileRowGap = 36;
             const int fileCheckX = rightColumnX;
@@ -132,13 +116,11 @@ namespace TeamsTrayStarter
             const int fileBrowseWidth = 100;
             const int fileActionX = 580;
             const int fileActionWidth = 100;
-
             const int futureOffDateWidth = 130;
             const int futureOffDateX = 550;
             const int vacationLabelY = 202;
             const int futureOffFromY = dayRowStartY + dayRowGap * 5;
             const int futureOffUntilY = dayRowStartY + dayRowGap * 6;
-
             const int buttonWidth = 100;
             const int buttonHeight = 36;
             const int bottomMargin = 16;
@@ -279,7 +261,7 @@ namespace TeamsTrayStarter
             };
             Controls.Add(_autoStartOffUntilCheckBox);
 
-            DateTime initialUntilMinDate = initialFromDate.AddDays(1);
+            DateTime initialUntilMinDate = initialFromDate;
 
             _autoStartOffUntilDatePicker = new DateTimePicker
             {
@@ -398,11 +380,10 @@ namespace TeamsTrayStarter
 
             _autoStartOffFromDatePicker.ValueChanged += (_, __) =>
             {
-                _autoStartOffUntilDatePicker.MinDate = _autoStartOffFromDatePicker.Value.Date.AddDays(1);
-
-                if (_autoStartOffUntilDatePicker.Value.Date <= _autoStartOffFromDatePicker.Value.Date)
+                _autoStartOffUntilDatePicker.MinDate = _autoStartOffFromDatePicker.Value.Date;
+                if (_autoStartOffUntilDatePicker.Value.Date < _autoStartOffFromDatePicker.Value.Date)
                 {
-                    _autoStartOffUntilDatePicker.Value = _autoStartOffFromDatePicker.Value.Date.AddDays(1);
+                    _autoStartOffUntilDatePicker.Value = _autoStartOffFromDatePicker.Value.Date;
                 }
             };
         }
@@ -617,11 +598,11 @@ namespace TeamsTrayStarter
 
                 if (_autoStartOffUntilCheckBox.Checked)
                 {
-                    if (_autoStartOffUntilDatePicker.Value.Date <= _autoStartOffFromDatePicker.Value.Date)
+                    if (_autoStartOffUntilDatePicker.Value.Date < _autoStartOffFromDatePicker.Value.Date)
                     {
                         MessageBox.Show(
                             this,
-                            "The 'Turn auto-start OFF until' date must be later than the 'from' date.",
+                            "The 'Turn auto-start OFF until' date cannot be earlier than the 'from' date.",
                             "Invalid end date",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Warning);

@@ -10,7 +10,6 @@ namespace TeamsTrayStarter
         private readonly Func<AppSettings> _getSettings;
         private readonly Action<AppSettings> _saveSettings;
         private readonly Action<string, string, ToolTipIcon> _notify;
-
         private readonly System.Windows.Forms.Timer _timer;
         private bool _launchInProgress;
 
@@ -71,7 +70,7 @@ namespace TeamsTrayStarter
             }
 
             var current = DateTime.Now;
-            var next = ComputeNextActionTime(current, settings);
+            var next = GetNextActionTime(current, settings);
             if (next == null)
             {
                 Logger.Info("Scheduler: no selected days to schedule.");
@@ -103,7 +102,6 @@ namespace TeamsTrayStarter
 
             if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, DateTime.Now))
                 return;
-
             if (_launchInProgress)
                 return;
 
@@ -137,7 +135,6 @@ namespace TeamsTrayStarter
                 Logger.Info("Evaluate: auto-start disabled. Skipping.");
                 return;
             }
-
             if (_launchInProgress)
             {
                 Logger.Info("Evaluate: launch already in progress. Skipping.");
@@ -188,7 +185,7 @@ namespace TeamsTrayStarter
             }
         }
 
-        private static DateTime? ComputeNextActionTime(DateTime now, AppSettings settings)
+        public static DateTime? GetNextActionTime(DateTime now, AppSettings settings)
         {
             for (int offset = 0; offset < 8; offset++)
             {

@@ -6,7 +6,7 @@ namespace TeamsTrayStarter
 {
     internal static class Program
     {
-        private const string SingleInstanceMutexName = @"Global\FileStarter_SingleInstance_Mutex";
+        private const string SingleInstanceMutexName = @"Local\FileStarter_SingleInstance_Mutex";
         private static Mutex? _singleInstanceMutex;
 
         [STAThread]

@@ -47,27 +47,46 @@ namespace TeamsTrayStarter
 
             if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, DateTime.Now))
             {
-                Logger.Info("Scheduler: auto-start disabled. No scheduling.");
+                if (SettingsManager.IsAutoStartPausedByDate(settings, DateTime.Now) &&
+                    settings.AutoStartOffUntilEnabled &&
+                    settings.AutoStartOffUntilDate != null)
+                {
+                    DateTime now = DateTime.Now;
+                    DateTime nextRecheck = settings.AutoStartOffUntilDate.Value.Date.AddDays(1);
+                    TimeSpan due = nextRecheck - now;
+                    if (due < TimeSpan.Zero)
+                        due = TimeSpan.Zero;
+
+                    int ms = (int)Math.Min(due.TotalMilliseconds, int.MaxValue);
+                    _timer.Interval = Math.Max(1, ms);
+                    _timer.Start();
+
+                    Logger.Info($"Scheduler: vacation mode active. Next recheck scheduled at {nextRecheck:yyyy-MM-dd HH:mm:ss} (in {due}).");
+                }
+                else
+                {
+                    Logger.Info("Scheduler: auto-start disabled. No scheduling.");
+                }
                 return;
             }
 
-            var now = DateTime.Now;
-            var next = ComputeNextActionTime(now, settings);
+            var current = DateTime.Now;
+            var next = ComputeNextActionTime(current, settings);
             if (next == null)
             {
                 Logger.Info("Scheduler: no selected days to schedule.");
                 return;
             }
 
-            var due = next.Value - now;
-            if (due < TimeSpan.Zero)
-                due = TimeSpan.Zero;
+            var nextDue = next.Value - current;
+            if (nextDue < TimeSpan.Zero)
+                nextDue = TimeSpan.Zero;
 
-            int ms = (int)Math.Min(due.TotalMilliseconds, int.MaxValue);
-            _timer.Interval = Math.Max(1, ms);
+            int nextMs = (int)Math.Min(nextDue.TotalMilliseconds, int.MaxValue);
+            _timer.Interval = Math.Max(1, nextMs);
             _timer.Start();
 
-            Logger.Info($"Scheduler: next evaluation scheduled at {next.Value:yyyy-MM-dd HH:mm:ss} (in {due}).");
+            Logger.Info($"Scheduler: next evaluation scheduled at {next.Value:yyyy-MM-dd HH:mm:ss} (in {nextDue}).");
 
             // If user logs in after today's scheduled time, launch immediately
             EvaluateAtStartupIfNeeded();
@@ -90,7 +109,6 @@ namespace TeamsTrayStarter
 
             var now = DateTime.Now;
             var todaySetting = SettingsManager.GetDaySetting(settings, now.DayOfWeek);
-
             if (!todaySetting.Enabled)
             {
                 Logger.Info("Scheduler: startup check skipped because today's day is not enabled.");

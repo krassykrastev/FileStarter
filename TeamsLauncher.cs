@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -127,7 +126,6 @@ namespace TeamsTrayStarter
                 }
 
                 bool isExe = string.Equals(Path.GetExtension(targetPath), ".exe", StringComparison.OrdinalIgnoreCase);
-
                 for (int attempt = 1; attempt <= MaxLaunchAttempts; attempt++)
                 {
                     if (isExe && IsExecutableRunning(targetPath))
@@ -149,7 +147,6 @@ namespace TeamsTrayStarter
                         if (isExe)
                         {
                             await Task.Delay(PostLaunchVerifyDelayMs);
-
                             if (IsExecutableRunning(targetPath))
                             {
                                 Logger.Info($"TryLaunchCustomTarget: verified running: {targetPath}");
@@ -198,19 +195,16 @@ namespace TeamsTrayStarter
                 }
 
                 bool launchIssued = false;
-
                 foreach (var target in TeamsLocator.GetLaunchTargets())
                 {
                     try
                     {
                         Logger.Info($"TryLaunchDefaultTeams: using {target} (attempt {attempt}).");
-
                         Process.Start(new ProcessStartInfo
                         {
                             FileName = target,
                             UseShellExecute = true
                         });
-
                         launchIssued = true;
                         break;
                     }
@@ -224,13 +218,11 @@ namespace TeamsTrayStarter
                 if (launchIssued)
                 {
                     await Task.Delay(PostLaunchVerifyDelayMs);
-
                     if (IsTeamsRunning())
                     {
                         Logger.Info("TryLaunchDefaultTeams: Teams verified as running.");
                         return true;
                     }
-
                     Logger.Warn("TryLaunchDefaultTeams: Teams not detected after launch.");
                 }
 
@@ -258,19 +250,16 @@ namespace TeamsTrayStarter
                 }
 
                 bool launchIssued = false;
-
                 foreach (var target in GetOutlookLaunchTargets())
                 {
                     try
                     {
                         Logger.Info($"TryLaunchDefaultOutlook: using {target} (attempt {attempt}).");
-
                         Process.Start(new ProcessStartInfo
                         {
                             FileName = target,
                             UseShellExecute = true
                         });
-
                         launchIssued = true;
                         break;
                     }
@@ -284,13 +273,11 @@ namespace TeamsTrayStarter
                 if (launchIssued)
                 {
                     await Task.Delay(PostLaunchVerifyDelayMs);
-
                     if (IsOutlookRunning())
                     {
                         Logger.Info("TryLaunchDefaultOutlook: Outlook verified as running.");
                         return true;
                     }
-
                     Logger.Warn("TryLaunchDefaultOutlook: Outlook not detected after launch.");
                 }
 
@@ -318,7 +305,6 @@ namespace TeamsTrayStarter
             if (File.Exists(newOutlookAlias)) yield return newOutlookAlias;
             if (File.Exists(office16x64)) yield return office16x64;
             if (File.Exists(office16x86)) yield return office16x86;
-
             yield return "outlook.exe";
             yield return "outlook:";
         }
@@ -335,9 +321,7 @@ namespace TeamsTrayStarter
                     try
                     {
                         if (p.Id == currentPid) continue;
-
                         var name = (p.ProcessName ?? "").Trim().ToLowerInvariant();
-
                         if (teamsProcessNames.Contains(name))
                             return true;
                     }
@@ -367,7 +351,6 @@ namespace TeamsTrayStarter
                     try
                     {
                         if (p.Id == currentPid) continue;
-
                         var name = (p.ProcessName ?? "").Trim().ToLowerInvariant();
                         if (processNames.Contains(name))
                             return true;
@@ -390,18 +373,27 @@ namespace TeamsTrayStarter
         {
             try
             {
-                string wanted = Path.GetFileNameWithoutExtension(fullPath).ToLowerInvariant();
+                string wantedName = Path.GetFileNameWithoutExtension(fullPath).ToLowerInvariant();
+                string wantedPath = NormalizePath(fullPath);
                 int currentPid = Process.GetCurrentProcess().Id;
 
                 foreach (var p in Process.GetProcesses())
                 {
                     try
                     {
-                        if (p.Id == currentPid) continue;
+                        if (p.Id == currentPid)
+                            continue;
 
                         var name = (p.ProcessName ?? "").Trim().ToLowerInvariant();
-                        if (name == wanted)
+                        if (name != wantedName)
+                            continue;
+
+                        string? processPath = TryGetProcessPath(p);
+                        if (!string.IsNullOrWhiteSpace(processPath) &&
+                            string.Equals(NormalizePath(processPath), wantedPath, StringComparison.OrdinalIgnoreCase))
+                        {
                             return true;
+                        }
                     }
                     catch
                     {
@@ -415,6 +407,25 @@ namespace TeamsTrayStarter
                 Logger.Error("IsExecutableRunning: failed; assuming not running.", ex);
                 return false;
             }
+        }
+
+        private static string? TryGetProcessPath(Process process)
+        {
+            try
+            {
+                return process.MainModule?.FileName;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string NormalizePath(string path)
+        {
+            return Path.GetFullPath(path)
+                .Trim()
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
     }
 }

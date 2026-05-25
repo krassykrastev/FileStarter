@@ -12,6 +12,7 @@ namespace TeamsTrayStarter
         private readonly ToolStripMenuItem _desktopNotificationsItem;
         private readonly ToolStripMenuItem _openSettingsItem;
         private readonly ToolStripMenuItem _openLogItem;
+        private readonly ToolStripMenuItem _emptyLogItem;
         private readonly ToolStripMenuItem _helpItem;
         private readonly ToolStripMenuItem _aboutItem;
         private readonly ToolStripMenuItem _exitItem;
@@ -69,7 +70,10 @@ namespace TeamsTrayStarter
 
             _openLogItem = new ToolStripMenuItem("Open log file");
             _openLogItem.Click += (_, __) => OpenLogFile();
-            
+
+            _emptyLogItem = new ToolStripMenuItem("Empty the log file");
+            _emptyLogItem.Click += (_, __) => EmptyLogFile();
+
             _helpItem = new ToolStripMenuItem("Help");
             _helpItem.Click += (_, __) => OpenHelp();
 
@@ -85,6 +89,7 @@ namespace TeamsTrayStarter
             menu.Items.Add(_desktopNotificationsItem);
             menu.Items.Add(_openSettingsItem);
             menu.Items.Add(_openLogItem);
+            menu.Items.Add(_emptyLogItem);
             menu.Items.Add(_helpItem);
             menu.Items.Add(_aboutItem);
             menu.Items.Add(new ToolStripSeparator());
@@ -301,6 +306,7 @@ namespace TeamsTrayStarter
                 ShowBalloon("FileStarter", "Settings update failed. See log.", ToolTipIcon.Error);
             }
         }
+
         private void OpenHelp()
         {
             try
@@ -323,6 +329,7 @@ namespace TeamsTrayStarter
                 ShowBalloon("FileStarter", "Could not open Help. See log for details.", ToolTipIcon.Warning);
             }
         }
+
         private void OpenAbout()
         {
             try
@@ -351,7 +358,7 @@ namespace TeamsTrayStarter
             {
                 var path = Logger.LogFilePath;
                 if (!System.IO.File.Exists(path))
-                    System.IO.File.WriteAllText(path, "Log created.\r\n");
+                    System.IO.File.WriteAllText(path, "Log created.");
 
                 if (_logViewerProcess != null && !_logViewerProcess.HasExited)
                 {
@@ -381,6 +388,20 @@ namespace TeamsTrayStarter
             {
                 Logger.Error("Failed to open log file.", ex);
                 ShowBalloon("FileStarter", "Could not open log file. See log.", ToolTipIcon.Warning);
+            }
+        }
+
+        private void EmptyLogFile()
+        {
+            try
+            {
+                Logger.Clear();
+                ShowBalloon("FileStarter", "Log file emptied.", ToolTipIcon.Info);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Failed to empty log file.", ex);
+                ShowBalloon("FileStarter", "Could not empty log file. See log.", ToolTipIcon.Warning);
             }
         }
 

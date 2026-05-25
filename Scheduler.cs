@@ -23,7 +23,6 @@ namespace TeamsTrayStarter
             _getSettings = getSettings;
             _saveSettings = saveSettings;
             _notify = notify;
-
             _timer = new System.Windows.Forms.Timer();
             _timer.Tick += (_, __) =>
             {
@@ -36,14 +35,12 @@ namespace TeamsTrayStarter
         public void StartOrReschedule()
         {
             _timer.Stop();
-
             var settings = _getSettings();
             if (SettingsManager.ApplyScheduledAutoStartOffIfDue(settings, DateTime.Now))
             {
                 Logger.Info("Scheduler: scheduled auto-start state transition applied.");
                 _saveSettings(settings);
             }
-
             if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, DateTime.Now))
             {
                 if (SettingsManager.IsAutoStartPausedByDate(settings, DateTime.Now) &&
@@ -55,11 +52,9 @@ namespace TeamsTrayStarter
                     TimeSpan due = nextRecheck - now;
                     if (due < TimeSpan.Zero)
                         due = TimeSpan.Zero;
-
                     int ms = (int)Math.Min(due.TotalMilliseconds, int.MaxValue);
                     _timer.Interval = Math.Max(1, ms);
                     _timer.Start();
-
                     Logger.Info($"Scheduler: vacation mode active. Next recheck scheduled at {nextRecheck:yyyy-MM-dd HH:mm:ss} (in {due}).");
                 }
                 else
@@ -68,7 +63,6 @@ namespace TeamsTrayStarter
                 }
                 return;
             }
-
             var current = DateTime.Now;
             var next = GetNextActionTime(current, settings);
             if (next == null)
@@ -76,18 +70,13 @@ namespace TeamsTrayStarter
                 Logger.Info("Scheduler: no selected days to schedule.");
                 return;
             }
-
             var nextDue = next.Value - current;
             if (nextDue < TimeSpan.Zero)
                 nextDue = TimeSpan.Zero;
-
             int nextMs = (int)Math.Min(nextDue.TotalMilliseconds, int.MaxValue);
             _timer.Interval = Math.Max(1, nextMs);
             _timer.Start();
-
             Logger.Info($"Scheduler: next evaluation scheduled at {next.Value:yyyy-MM-dd HH:mm:ss} (in {nextDue}).");
-
-            // If user logs in after today's scheduled time, launch immediately
             EvaluateAtStartupIfNeeded();
         }
 
@@ -99,12 +88,10 @@ namespace TeamsTrayStarter
                 Logger.Info("Scheduler: scheduled auto-start state transition applied during startup evaluation.");
                 _saveSettings(settings);
             }
-
             if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, DateTime.Now))
                 return;
             if (_launchInProgress)
                 return;
-
             var now = DateTime.Now;
             var todaySetting = SettingsManager.GetDaySetting(settings, now.DayOfWeek);
             if (!todaySetting.Enabled)
@@ -112,7 +99,6 @@ namespace TeamsTrayStarter
                 Logger.Info("Scheduler: startup check skipped because today's day is not enabled.");
                 return;
             }
-
             var todayLaunch = now.Date.Add(SettingsManager.GetDayLaunchTimeOrDefault(settings, now.DayOfWeek));
             if (now >= todayLaunch)
             {
@@ -129,7 +115,6 @@ namespace TeamsTrayStarter
                 Logger.Info("Scheduler: scheduled auto-start state transition applied during evaluation.");
                 _saveSettings(settings);
             }
-
             if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, DateTime.Now))
             {
                 Logger.Info("Evaluate: auto-start disabled. Skipping.");
@@ -140,7 +125,6 @@ namespace TeamsTrayStarter
                 Logger.Info("Evaluate: launch already in progress. Skipping.");
                 return;
             }
-
             var now = DateTime.Now;
             var todaySetting = SettingsManager.GetDaySetting(settings, now.DayOfWeek);
             if (!todaySetting.Enabled)
@@ -148,14 +132,12 @@ namespace TeamsTrayStarter
                 Logger.Info("Evaluate: current day is not selected.");
                 return;
             }
-
             var todayLaunch = now.Date.Add(SettingsManager.GetDayLaunchTimeOrDefault(settings, now.DayOfWeek));
             if (now < todayLaunch)
             {
                 Logger.Info("Evaluate: before today's launch time.");
                 return;
             }
-
             _launchInProgress = true;
             _ = LaunchAndPersistAsync(settings);
         }
@@ -193,7 +175,6 @@ namespace TeamsTrayStarter
                 var daySetting = SettingsManager.GetDaySetting(settings, date.DayOfWeek);
                 if (!daySetting.Enabled)
                     continue;
-
                 var launchTime = SettingsManager.GetDayLaunchTimeOrDefault(settings, date.DayOfWeek);
                 var candidate = date.Add(launchTime);
                 if (candidate > now)

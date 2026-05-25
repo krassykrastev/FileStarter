@@ -6,6 +6,7 @@ namespace TeamsTrayStarter
     public static class Logger
     {
         private static readonly object _sync = new object();
+        private const long MaxLogSizeBytes = 1_048_576; // 1 MB
 
         public static string LogFilePath { get; private set; } = "";
 
@@ -50,6 +51,16 @@ namespace TeamsTrayStarter
                         return;
 
                     Directory.CreateDirectory(Path.GetDirectoryName(LogFilePath)!);
+
+                    if (File.Exists(LogFilePath))
+                    {
+                        var info = new FileInfo(LogFilePath);
+                        if (info.Length > MaxLogSizeBytes)
+                        {
+                            File.WriteAllText(LogFilePath, string.Empty);
+                        }
+                    }
+
                     var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{level}] {message}{Environment.NewLine}";
                     File.AppendAllText(LogFilePath, line);
                 }

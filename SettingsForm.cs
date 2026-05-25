@@ -1,6 +1,6 @@
-
 using System;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 
 namespace TeamsTrayStarter
@@ -162,22 +162,10 @@ namespace TeamsTrayStarter
             Controls.Add(selectFilesLabel);
 
             int fileRowY = rightHeaderY + fileSectionLabelGap;
-
-            (_file1CheckBox, _file1TextBox, _file1BrowseButton) =
-                CreateFileRow(1, "MS Teams", _file1Path, current.File1Enabled, fileRowY,
-                    fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
-
-            (_file2CheckBox, _file2TextBox, _file2BrowseButton) =
-                CreateFileRow(2, "MS Outlook", _file2Path, current.File2Enabled, fileRowY + fileRowGap,
-                    fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
-
-            (_file3CheckBox, _file3TextBox, _file3BrowseButton) =
-                CreateFileRow(3, "not yet selected", _file3Path, current.File3Enabled, fileRowY + fileRowGap * 2,
-                    fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
-
-            (_file4CheckBox, _file4TextBox, _file4BrowseButton) =
-                CreateFileRow(4, "not yet selected", _file4Path, current.File4Enabled, fileRowY + fileRowGap * 3,
-                    fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
+            (_file1CheckBox, _file1TextBox, _file1BrowseButton) = CreateFileRow(1, "MS Teams", _file1Path, current.File1Enabled, fileRowY, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
+            (_file2CheckBox, _file2TextBox, _file2BrowseButton) = CreateFileRow(2, "MS Outlook", _file2Path, current.File2Enabled, fileRowY + fileRowGap, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
+            (_file3CheckBox, _file3TextBox, _file3BrowseButton) = CreateFileRow(3, "not yet selected", _file3Path, current.File3Enabled, fileRowY + fileRowGap * 2, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
+            (_file4CheckBox, _file4TextBox, _file4BrowseButton) = CreateFileRow(4, "not yet selected", _file4Path, current.File4Enabled, fileRowY + fileRowGap * 3, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth);
 
             _file1DefaultButton = CreateSecondaryButton("Default", fileActionX, fileRowY);
             _file2DefaultButton = CreateSecondaryButton("Default", fileActionX, fileRowY + fileRowGap);
@@ -235,10 +223,9 @@ namespace TeamsTrayStarter
             };
             Controls.Add(_autoStartOffFromCheckBox);
 
-            DateTime initialFromDate =
-                current.AutoStartOffFromDate.HasValue && current.AutoStartOffFromDate.Value.Date >= DateTime.Today
-                    ? current.AutoStartOffFromDate.Value.Date
-                    : DateTime.Today;
+            DateTime initialFromDate = current.AutoStartOffFromDate.HasValue && current.AutoStartOffFromDate.Value.Date >= DateTime.Today
+                ? current.AutoStartOffFromDate.Value.Date
+                : DateTime.Today;
 
             _autoStartOffFromDatePicker = new DateTimePicker
             {
@@ -280,7 +267,6 @@ namespace TeamsTrayStarter
             WireFutureOffControls();
 
             int btnY = ClientSize.Height - buttonHeight - bottomMargin;
-
             _okButton = new Button
             {
                 Text = "OK",
@@ -313,13 +299,7 @@ namespace TeamsTrayStarter
             PerformLayout();
         }
 
-        private (CheckBox checkBox, DateTimePicker timePicker) CreateDayRow(
-            string dayAbbrev,
-            int checkX,
-            int dayX,
-            int timeX,
-            int y,
-            DayLaunchSetting currentDaySetting)
+        private (CheckBox checkBox, DateTimePicker timePicker) CreateDayRow(string dayAbbrev, int checkX, int dayX, int timeX, int y, DayLaunchSetting currentDaySetting)
         {
             var cb = new CheckBox
             {
@@ -327,14 +307,12 @@ namespace TeamsTrayStarter
                 Location = new Point(checkX, y + 4),
                 Checked = currentDaySetting.Enabled
             };
-
             var dayLabel = new Label
             {
                 Text = dayAbbrev,
                 AutoSize = true,
                 Location = new Point(dayX, y + 6)
             };
-
             var timePicker = new DateTimePicker
             {
                 Format = DateTimePickerFormat.Custom,
@@ -343,16 +321,13 @@ namespace TeamsTrayStarter
                 Width = 80,
                 Location = new Point(timeX, y)
             };
-
             if (TimeSpan.TryParse(currentDaySetting.Time, out var t))
                 timePicker.Value = DateTime.Today.Add(t);
             else
                 timePicker.Value = DateTime.Today.AddHours(9);
-
             Controls.Add(cb);
             Controls.Add(dayLabel);
             Controls.Add(timePicker);
-
             return (cb, timePicker);
         }
 
@@ -368,16 +343,12 @@ namespace TeamsTrayStarter
             _autoStartOffFromDatePicker.Enabled = _autoStartOffFromCheckBox.Checked;
             _autoStartOffUntilCheckBox.Enabled = _autoStartOffFromCheckBox.Checked;
             _autoStartOffUntilDatePicker.Enabled = _autoStartOffFromCheckBox.Checked && _autoStartOffUntilCheckBox.Checked;
-
             _autoStartOffCheckBox_CheckedChanged(null, EventArgs.Empty);
-
             _autoStartOffFromCheckBox.CheckedChanged += _autoStartOffCheckBox_CheckedChanged;
-
             _autoStartOffUntilCheckBox.CheckedChanged += (_, __) =>
             {
                 _autoStartOffUntilDatePicker.Enabled = _autoStartOffFromCheckBox.Checked && _autoStartOffUntilCheckBox.Checked;
             };
-
             _autoStartOffFromDatePicker.ValueChanged += (_, __) =>
             {
                 _autoStartOffUntilDatePicker.MinDate = _autoStartOffFromDatePicker.Value.Date;
@@ -402,17 +373,7 @@ namespace TeamsTrayStarter
             checkBox.CheckedChanged += (_, __) => { textBox.Enabled = checkBox.Checked; };
         }
 
-        private (CheckBox checkBox, TextBox textBox, Button browseButton) CreateFileRow(
-            int fileIndex,
-            string defaultText,
-            string? path,
-            bool isChecked,
-            int y,
-            int checkX,
-            int textX,
-            int textWidth,
-            int browseX,
-            int browseWidth)
+        private (CheckBox checkBox, TextBox textBox, Button browseButton) CreateFileRow(int fileIndex, string defaultText, string? path, bool isChecked, int y, int checkX, int textX, int textWidth, int browseX, int browseWidth)
         {
             var cb = new CheckBox
             {
@@ -420,7 +381,6 @@ namespace TeamsTrayStarter
                 Location = new Point(checkX, y + 4),
                 Checked = isChecked
             };
-
             var tb = new TextBox
             {
                 ReadOnly = true,
@@ -432,7 +392,6 @@ namespace TeamsTrayStarter
                 Cursor = Cursors.Default,
                 Text = SettingsManager.GetFileLineText(fileIndex, path, defaultText)
             };
-
             var browse = new Button
             {
                 Text = "Browse...",
@@ -441,11 +400,9 @@ namespace TeamsTrayStarter
                 Location = new Point(browseX, y),
                 FlatStyle = FlatStyle.System
             };
-
             Controls.Add(cb);
             Controls.Add(tb);
             Controls.Add(browse);
-
             return (cb, tb, browse);
         }
 
@@ -469,33 +426,27 @@ namespace TeamsTrayStarter
                 CheckFileExists = true,
                 Multiselect = false
             };
-
             if (dlg.ShowDialog() != DialogResult.OK)
                 return;
-
             switch (fileIndex)
             {
                 case 1:
                     _file1Path = dlg.FileName;
                     _file1TextBox.Text = SettingsManager.GetFileLineText(1, _file1Path, "MS Teams");
                     break;
-
                 case 2:
                     _file2Path = dlg.FileName;
                     _file2TextBox.Text = SettingsManager.GetFileLineText(2, _file2Path, "MS Outlook");
                     break;
-
                 case 3:
                     _file3Path = dlg.FileName;
                     _file3TextBox.Text = SettingsManager.GetFileLineText(3, _file3Path, "not yet selected");
                     break;
-
                 case 4:
                     _file4Path = dlg.FileName;
                     _file4TextBox.Text = SettingsManager.GetFileLineText(4, _file4Path, "not yet selected");
                     break;
             }
-
             UpdateFileActionButtonStates();
         }
 
@@ -552,60 +503,63 @@ namespace TeamsTrayStarter
                 (_file2CheckBox.Checked ? 1 : 0) +
                 (_file3CheckBox.Checked ? 1 : 0) +
                 (_file4CheckBox.Checked ? 1 : 0);
-
             if (checkedCount == 0)
             {
                 changedCheckBox.Checked = true;
             }
         }
 
+        private bool ValidateCustomPathExists(string slotName, string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return true;
+
+            if (File.Exists(path))
+                return true;
+
+            MessageBox.Show(
+                this,
+                $"{slotName} has a custom path selected, but the file no longer exists. Please browse for a valid file or restore the default path.",
+                $"Missing {slotName} file",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+            return false;
+        }
+
         private void OnOk()
         {
             if (_file3CheckBox.Checked && string.IsNullOrWhiteSpace(_file3Path))
             {
-                MessageBox.Show(
-                    this,
-                    "File 3 is selected, but no file has been chosen. Please browse for a file or uncheck File 3.",
-                    "Missing File 3",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
+                MessageBox.Show(this, "File 3 is selected, but no file has been chosen. Please browse for a file or uncheck File 3.", "Missing File 3", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (_file4CheckBox.Checked && string.IsNullOrWhiteSpace(_file4Path))
+            {
+                MessageBox.Show(this, "File 4 is selected, but no file has been chosen. Please browse for a file or uncheck File 4.", "Missing File 4", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            if (_file4CheckBox.Checked && string.IsNullOrWhiteSpace(_file4Path))
-            {
-                MessageBox.Show(
-                    this,
-                    "File 4 is selected, but no file has been chosen. Please browse for a file or uncheck File 4.",
-                    "Missing File 4",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
+            if (!ValidateCustomPathExists("File 1", _file1Path))
                 return;
-            }
+            if (!ValidateCustomPathExists("File 2", _file2Path))
+                return;
+            if (!ValidateCustomPathExists("File 3", _file3Path))
+                return;
+            if (!ValidateCustomPathExists("File 4", _file4Path))
+                return;
 
             if (_autoStartOffFromCheckBox.Checked)
             {
                 if (_autoStartOffFromDatePicker.Value.Date < DateTime.Today)
                 {
-                    MessageBox.Show(
-                        this,
-                        "The start date cannot be in the past.",
-                        "Invalid start date",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
+                    MessageBox.Show(this, "The start date cannot be in the past.", "Invalid start date", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
-
                 if (_autoStartOffUntilCheckBox.Checked)
                 {
                     if (_autoStartOffUntilDatePicker.Value.Date < _autoStartOffFromDatePicker.Value.Date)
                     {
-                        MessageBox.Show(
-                            this,
-                            "The 'Turn auto-start OFF until' date cannot be earlier than the 'from' date.",
-                            "Invalid end date",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
+                        MessageBox.Show(this, "The 'Turn auto-start OFF until' date cannot be earlier than the 'from' date.", "Invalid end date", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
                 }
@@ -618,7 +572,6 @@ namespace TeamsTrayStarter
             FriEnabled = _friCheckBox.Checked;
             SatEnabled = _satCheckBox.Checked;
             SunEnabled = _sunCheckBox.Checked;
-
             MonTimeHHmm = _monTimePicker.Value.ToString("HH:mm");
             TueTimeHHmm = _tueTimePicker.Value.ToString("HH:mm");
             WedTimeHHmm = _wedTimePicker.Value.ToString("HH:mm");
@@ -626,25 +579,20 @@ namespace TeamsTrayStarter
             FriTimeHHmm = _friTimePicker.Value.ToString("HH:mm");
             SatTimeHHmm = _satTimePicker.Value.ToString("HH:mm");
             SunTimeHHmm = _sunTimePicker.Value.ToString("HH:mm");
-
             AutoStartOffFromEnabled = _autoStartOffFromCheckBox.Checked;
             AutoStartOffFromDate = _autoStartOffFromCheckBox.Checked ? _autoStartOffFromDatePicker.Value.Date : null;
-
             AutoStartOffUntilEnabled = _autoStartOffUntilCheckBox.Checked;
             AutoStartOffUntilDate = (_autoStartOffFromCheckBox.Checked && _autoStartOffUntilCheckBox.Checked)
                 ? _autoStartOffUntilDatePicker.Value.Date
                 : null;
-
             File1Enabled = _file1CheckBox.Checked;
             File2Enabled = _file2CheckBox.Checked;
             File3Enabled = _file3CheckBox.Checked;
             File4Enabled = _file4CheckBox.Checked;
-
             File1Path = _file1Path;
             File2Path = _file2Path;
             File3Path = _file3Path;
             File4Path = _file4Path;
-
             Accepted = true;
             Close();
         }

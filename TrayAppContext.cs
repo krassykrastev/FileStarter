@@ -19,8 +19,6 @@ namespace TeamsTrayStarter
         private readonly ToolStripMenuItem _exitItem;
         private readonly Scheduler _scheduler;
         private readonly TeamsLauncher _teamsLauncher;
-
-        // Timer used to distinguish single left-click from double left-click
         private readonly System.Windows.Forms.Timer _singleLeftClickTimer;
 
         private AppSettings _settings;
@@ -104,9 +102,6 @@ namespace TeamsTrayStarter
                 ContextMenuStrip = menu
             };
 
-            // Single-vs-double-click handler:
-            // - single left click => toggle auto-start
-            // - double left click => open settings
             _singleLeftClickTimer = new System.Windows.Forms.Timer
             {
                 Interval = SystemInformation.DoubleClickTime
@@ -167,10 +162,7 @@ namespace TeamsTrayStarter
 
             bool effectiveAutoStart = SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now);
             _autoStartToggleItem.Checked = effectiveAutoStart;
-            _autoStartToggleItem.Text = effectiveAutoStart
-                ? "Auto-start ON"
-                : "Auto-start OFF";
-
+            _autoStartToggleItem.Text = effectiveAutoStart ? "Auto-start ON" : "Auto-start OFF";
             _runAtStartupItem.Checked = _settings.RunAppAtStartup;
             _desktopNotificationsItem.Checked = _settings.EnableDesktopNotifications;
 
@@ -184,7 +176,6 @@ namespace TeamsTrayStarter
         private static string GetTrayHoverText(DateTime now, AppSettings settings)
         {
             string text;
-
             bool vacationActive = SettingsManager.IsAutoStartPausedByDate(settings, now);
             if (vacationActive && settings.AutoStartOffUntilEnabled && settings.AutoStartOffUntilDate != null)
             {
@@ -197,14 +188,9 @@ namespace TeamsTrayStarter
             else
             {
                 var next = Scheduler.GetNextActionTime(now, settings);
-                if (next != null)
-                {
-                    text = $"Auto-start ON, next {next.Value:ddd dd/MM HH:mm}";
-                }
-                else
-                {
-                    text = "Auto-start ON";
-                }
+                text = next != null
+                    ? $"Auto-start ON, next {next.Value:ddd dd/MM HH:mm}"
+                    : "Auto-start ON";
             }
 
             return text.Length <= NotifyIconTextMaxLength
@@ -250,11 +236,13 @@ namespace TeamsTrayStarter
             var exePath = Environment.ProcessPath;
             if (string.IsNullOrWhiteSpace(exePath))
                 throw new InvalidOperationException("Cannot determine executable path.");
+
             var command = $"\"{exePath}\"";
             using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: true)
                           ?? Registry.CurrentUser.CreateSubKey(RunKeyPath, writable: true);
             if (key == null)
                 throw new InvalidOperationException("Cannot open HKCU Run key.");
+
             key.SetValue(RunValueName, command, RegistryValueKind.String);
         }
 
@@ -280,6 +268,38 @@ namespace TeamsTrayStarter
             }
         }
 
+        private void ApplySettingsFromForm(SettingsForm form)
+        {
+            _settings.Mon.Enabled = form.MonEnabled;
+            _settings.Mon.Time = form.MonTimeHHmm;
+            _settings.Tue.Enabled = form.TueEnabled;
+            _settings.Tue.Time = form.TueTimeHHmm;
+            _settings.Wed.Enabled = form.WedEnabled;
+            _settings.Wed.Time = form.WedTimeHHmm;
+            _settings.Thu.Enabled = form.ThuEnabled;
+            _settings.Thu.Time = form.ThuTimeHHmm;
+            _settings.Fri.Enabled = form.FriEnabled;
+            _settings.Fri.Time = form.FriTimeHHmm;
+            _settings.Sat.Enabled = form.SatEnabled;
+            _settings.Sat.Time = form.SatTimeHHmm;
+            _settings.Sun.Enabled = form.SunEnabled;
+            _settings.Sun.Time = form.SunTimeHHmm;
+
+            _settings.AutoStartOffFromEnabled = form.AutoStartOffFromEnabled;
+            _settings.AutoStartOffFromDate = form.AutoStartOffFromDate;
+            _settings.AutoStartOffUntilEnabled = form.AutoStartOffUntilEnabled;
+            _settings.AutoStartOffUntilDate = form.AutoStartOffUntilDate;
+
+            _settings.File1Enabled = form.File1Enabled;
+            _settings.File1Path = form.File1Path;
+            _settings.File2Enabled = form.File2Enabled;
+            _settings.File2Path = form.File2Path;
+            _settings.File3Enabled = form.File3Enabled;
+            _settings.File3Path = form.File3Path;
+            _settings.File4Enabled = form.File4Enabled;
+            _settings.File4Path = form.File4Path;
+        }
+
         private void OpenSettings()
         {
             try
@@ -289,41 +309,19 @@ namespace TeamsTrayStarter
                     ShowOrActivateForm(_settingsForm);
                     return;
                 }
+
                 _settingsForm = new SettingsForm(_settings);
                 _settingsForm.FormClosed += (_, __) =>
                 {
                     if (_settingsForm != null && _settingsForm.Accepted)
                     {
-                        _settings.Mon.Enabled = _settingsForm.MonEnabled;
-                        _settings.Mon.Time = _settingsForm.MonTimeHHmm;
-                        _settings.Tue.Enabled = _settingsForm.TueEnabled;
-                        _settings.Tue.Time = _settingsForm.TueTimeHHmm;
-                        _settings.Wed.Enabled = _settingsForm.WedEnabled;
-                        _settings.Wed.Time = _settingsForm.WedTimeHHmm;
-                        _settings.Thu.Enabled = _settingsForm.ThuEnabled;
-                        _settings.Thu.Time = _settingsForm.ThuTimeHHmm;
-                        _settings.Fri.Enabled = _settingsForm.FriEnabled;
-                        _settings.Fri.Time = _settingsForm.FriTimeHHmm;
-                        _settings.Sat.Enabled = _settingsForm.SatEnabled;
-                        _settings.Sat.Time = _settingsForm.SatTimeHHmm;
-                        _settings.Sun.Enabled = _settingsForm.SunEnabled;
-                        _settings.Sun.Time = _settingsForm.SunTimeHHmm;
-                        _settings.AutoStartOffFromEnabled = _settingsForm.AutoStartOffFromEnabled;
-                        _settings.AutoStartOffFromDate = _settingsForm.AutoStartOffFromDate;
-                        _settings.AutoStartOffUntilEnabled = _settingsForm.AutoStartOffUntilEnabled;
-                        _settings.AutoStartOffUntilDate = _settingsForm.AutoStartOffUntilDate;
-                        _settings.File1Enabled = _settingsForm.File1Enabled;
-                        _settings.File1Path = _settingsForm.File1Path;
-                        _settings.File2Enabled = _settingsForm.File2Enabled;
-                        _settings.File2Path = _settingsForm.File2Path;
-                        _settings.File3Enabled = _settingsForm.File3Enabled;
-                        _settings.File3Path = _settingsForm.File3Path;
-                        _settings.File4Enabled = _settingsForm.File4Enabled;
-                        _settings.File4Path = _settingsForm.File4Path;
+                        ApplySettingsFromForm(_settingsForm);
+
                         if (SettingsManager.ApplyScheduledAutoStartOffIfDue(_settings, DateTime.Now))
                         {
                             Logger.Info("TrayAppContext: one-time scheduled auto-start OFF applied after saving settings.");
                         }
+
                         SettingsManager.Save(_settings);
                         Logger.Info("Settings updated successfully.");
                         UpdateTrayUi();
@@ -331,6 +329,7 @@ namespace TeamsTrayStarter
                     }
                     _settingsForm = null;
                 };
+
                 _settingsForm.Show();
                 _settingsForm.BringToFront();
                 _settingsForm.Activate();

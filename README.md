@@ -79,8 +79,8 @@ From the Settings window you can:
 
 ---
 
-## 🏖 Vacation Mode: Temporarily disable auto-start using a date range. Perfect for holidays/ time off:
-
+## 🏖 Vacation Mode: Temporarily disable auto-start using a date range:
+Perfect for holidays / time off:
 - Turn auto-start OFF from a specific date  
 - Optionally set an "until" date  
 - Auto-start resumes automatically after the period ends  

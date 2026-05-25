@@ -4,16 +4,6 @@
 
 # 🚀 FileStarter
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/krassykrastev/FileStarter/main/Assets/app.ico" width="64" />
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/platform-Windows-blue" />
-  <img src="https://img.shields.io/badge/.NET-6+-purple" />
-  <img src="https://img.shields.io/badge/status-active-success" />
-  <img src="https://img.shields.io/badge/license-free-lightgrey" />
-</p>
 
 FileStarter is a lightweight Windows tray application that automatically launches apps or files based on a configurable schedule.
 

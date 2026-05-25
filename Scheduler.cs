@@ -1,3 +1,4 @@
+
 using System;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -23,6 +24,7 @@ namespace TeamsTrayStarter
             _getSettings = getSettings;
             _saveSettings = saveSettings;
             _notify = notify;
+
             _timer = new System.Windows.Forms.Timer();
             _timer.Tick += (_, __) =>
             {
@@ -35,27 +37,24 @@ namespace TeamsTrayStarter
         public void StartOrReschedule()
         {
             _timer.Stop();
+
             var settings = _getSettings();
-            if (SettingsManager.ApplyScheduledAutoStartOffIfDue(settings, DateTime.Now))
+            var now = DateTime.Now;
+
+            if (SettingsManager.ApplyScheduledAutoStartOffIfDue(settings, now))
             {
                 Logger.Info("Scheduler: scheduled auto-start state transition applied.");
                 _saveSettings(settings);
+                now = DateTime.Now;
             }
-            if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, DateTime.Now))
+
+            DateTime? nextVacationTransition = GetNextVacationTransitionTime(now, settings);
+
+            if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, now))
             {
-                if (SettingsManager.IsAutoStartPausedByDate(settings, DateTime.Now) &&
-                    settings.AutoStartOffUntilEnabled &&
-                    settings.AutoStartOffUntilDate != null)
+                if (nextVacationTransition != null)
                 {
-                    DateTime now = DateTime.Now;
-                    DateTime nextRecheck = settings.AutoStartOffUntilDate.Value.Date.AddDays(1);
-                    TimeSpan due = nextRecheck - now;
-                    if (due < TimeSpan.Zero)
-                        due = TimeSpan.Zero;
-                    int ms = (int)Math.Min(due.TotalMilliseconds, int.MaxValue);
-                    _timer.Interval = Math.Max(1, ms);
-                    _timer.Start();
-                    Logger.Info($"Scheduler: vacation mode active. Next recheck scheduled at {nextRecheck:yyyy-MM-dd HH:mm:ss} (in {due}).");
+                    ScheduleTimerTo(nextVacationTransition.Value, now, "Scheduler: vacation/start-date transition recheck");
                 }
                 else
                 {
@@ -63,20 +62,19 @@ namespace TeamsTrayStarter
                 }
                 return;
             }
-            var current = DateTime.Now;
-            var next = GetNextActionTime(current, settings);
-            if (next == null)
+
+            DateTime? nextLaunch = GetNextActionTime(now, settings);
+            DateTime? nextEvaluation = GetEarlier(nextLaunch, nextVacationTransition);
+
+            if (nextEvaluation == null)
             {
                 Logger.Info("Scheduler: no selected days to schedule.");
                 return;
             }
-            var nextDue = next.Value - current;
-            if (nextDue < TimeSpan.Zero)
-                nextDue = TimeSpan.Zero;
-            int nextMs = (int)Math.Min(nextDue.TotalMilliseconds, int.MaxValue);
-            _timer.Interval = Math.Max(1, nextMs);
-            _timer.Start();
-            Logger.Info($"Scheduler: next evaluation scheduled at {next.Value:yyyy-MM-dd HH:mm:ss} (in {nextDue}).");
+
+            ScheduleTimerTo(nextEvaluation.Value, now, "Scheduler: next evaluation");
+
+            // If user logs in after today's scheduled time, launch immediately
             EvaluateAtStartupIfNeeded();
         }
 
@@ -88,10 +86,13 @@ namespace TeamsTrayStarter
                 Logger.Info("Scheduler: scheduled auto-start state transition applied during startup evaluation.");
                 _saveSettings(settings);
             }
+
             if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, DateTime.Now))
                 return;
+
             if (_launchInProgress)
                 return;
+
             var now = DateTime.Now;
             var todaySetting = SettingsManager.GetDaySetting(settings, now.DayOfWeek);
             if (!todaySetting.Enabled)
@@ -99,6 +100,7 @@ namespace TeamsTrayStarter
                 Logger.Info("Scheduler: startup check skipped because today's day is not enabled.");
                 return;
             }
+
             var todayLaunch = now.Date.Add(SettingsManager.GetDayLaunchTimeOrDefault(settings, now.DayOfWeek));
             if (now >= todayLaunch)
             {
@@ -115,16 +117,19 @@ namespace TeamsTrayStarter
                 Logger.Info("Scheduler: scheduled auto-start state transition applied during evaluation.");
                 _saveSettings(settings);
             }
+
             if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, DateTime.Now))
             {
                 Logger.Info("Evaluate: auto-start disabled. Skipping.");
                 return;
             }
+
             if (_launchInProgress)
             {
                 Logger.Info("Evaluate: launch already in progress. Skipping.");
                 return;
             }
+
             var now = DateTime.Now;
             var todaySetting = SettingsManager.GetDaySetting(settings, now.DayOfWeek);
             if (!todaySetting.Enabled)
@@ -132,12 +137,14 @@ namespace TeamsTrayStarter
                 Logger.Info("Evaluate: current day is not selected.");
                 return;
             }
+
             var todayLaunch = now.Date.Add(SettingsManager.GetDayLaunchTimeOrDefault(settings, now.DayOfWeek));
             if (now < todayLaunch)
             {
                 Logger.Info("Evaluate: before today's launch time.");
                 return;
             }
+
             _launchInProgress = true;
             _ = LaunchAndPersistAsync(settings);
         }
@@ -175,12 +182,55 @@ namespace TeamsTrayStarter
                 var daySetting = SettingsManager.GetDaySetting(settings, date.DayOfWeek);
                 if (!daySetting.Enabled)
                     continue;
+
                 var launchTime = SettingsManager.GetDayLaunchTimeOrDefault(settings, date.DayOfWeek);
                 var candidate = date.Add(launchTime);
                 if (candidate > now)
                     return candidate;
             }
+
             return null;
+        }
+
+        private static DateTime? GetNextVacationTransitionTime(DateTime now, AppSettings settings)
+        {
+            if (!settings.AutoStartOffFromEnabled || settings.AutoStartOffFromDate == null)
+                return null;
+
+            DateTime start = settings.AutoStartOffFromDate.Value.Date;
+            if (now.Date < start)
+                return start;
+
+            if (settings.AutoStartOffUntilEnabled && settings.AutoStartOffUntilDate != null)
+            {
+                DateTime endResume = settings.AutoStartOffUntilDate.Value.Date.AddDays(1);
+                if (now < endResume)
+                    return endResume;
+            }
+
+            return null;
+        }
+
+        private void ScheduleTimerTo(DateTime target, DateTime now, string label)
+        {
+            TimeSpan due = target - now;
+            if (due < TimeSpan.Zero)
+                due = TimeSpan.Zero;
+
+            int ms = (int)Math.Min(due.TotalMilliseconds, int.MaxValue);
+            _timer.Interval = Math.Max(1, ms);
+            _timer.Start();
+
+            Logger.Info($"{label} scheduled at {target:yyyy-MM-dd HH:mm:ss} (in {due}).");
+        }
+
+        private static DateTime? GetEarlier(DateTime? first, DateTime? second)
+        {
+            if (first == null)
+                return second;
+            if (second == null)
+                return first;
+            return first.Value <= second.Value ? first : second;
         }
 
         public void Dispose()

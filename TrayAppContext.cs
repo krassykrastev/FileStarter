@@ -1,6 +1,8 @@
+
 using System;
 using System.Diagnostics;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 namespace TeamsTrayStarter
 {
@@ -30,6 +32,9 @@ namespace TeamsTrayStarter
         private AboutForm? _aboutForm;
         private Process? _logViewerProcess;
         private HelpForm? _helpForm;
+
+        private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+        private const string RunValueName = "FileStarter";
 
         public TrayAppContext()
         {
@@ -120,7 +125,7 @@ namespace TeamsTrayStarter
             try
             {
                 if (_settings.RunAppAtStartup)
-                    StartupManager.EnableRunAtLogin();
+                    EnableRunAtLogin();
             }
             catch (Exception ex)
             {
@@ -137,7 +142,6 @@ namespace TeamsTrayStarter
             if (e.Button != MouseButtons.Left)
                 return;
 
-            // Start the timer. If this becomes a double-click, MouseDoubleClick will stop it.
             _singleLeftClickTimer.Stop();
             _singleLeftClickTimer.Start();
         }
@@ -147,7 +151,6 @@ namespace TeamsTrayStarter
             if (e.Button != MouseButtons.Left)
                 return;
 
-            // Cancel pending single-click toggle and open Settings instead
             _singleLeftClickTimer.Stop();
             OpenSettings();
         }
@@ -204,11 +207,11 @@ namespace TeamsTrayStarter
             {
                 if (_settings.RunAppAtStartup)
                 {
-                    StartupManager.EnableRunAtLogin();
+                    EnableRunAtLogin();
                 }
                 else
                 {
-                    StartupManager.DisableRunAtLogin();
+                    DisableRunAtLogin();
                 }
 
                 Logger.Info($"Run-at-startup toggled to: {_settings.RunAppAtStartup}");
@@ -220,6 +223,27 @@ namespace TeamsTrayStarter
                 Logger.Error("Failed to toggle Run-at-startup.", ex);
                 ShowBalloon("FileStarter", "Failed to change startup setting. See log.", ToolTipIcon.Error);
             }
+        }
+
+        private static void EnableRunAtLogin()
+        {
+            var exePath = Environment.ProcessPath;
+            if (string.IsNullOrWhiteSpace(exePath))
+                throw new InvalidOperationException("Cannot determine executable path.");
+
+            var command = $"\"{exePath}\"";
+            using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: true)
+                          ?? Registry.CurrentUser.CreateSubKey(RunKeyPath, writable: true);
+            if (key == null)
+                throw new InvalidOperationException("Cannot open HKCU Run key.");
+
+            key.SetValue(RunValueName, command, RegistryValueKind.String);
+        }
+
+        private static void DisableRunAtLogin()
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: true);
+            key?.DeleteValue(RunValueName, throwOnMissingValue: false);
         }
 
         private void ToggleDesktopNotifications()

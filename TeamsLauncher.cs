@@ -27,118 +27,76 @@ namespace TeamsTrayStarter
             public bool Failed { get; }
         }
 
-        public async Task<bool> TryLaunchTargetsWithRetryAsync(bool force, AppSettings settings, Action<string, string, ToolTipIcon> notify)
-        {
-            if (!force && !settings.AutoStartTeamsEnabled)
-            {
-                Logger.Info("TryLaunch: auto-start disabled; skipping.");
-                return false;
-            }
-
-            var launchedNames = new List<string>();
-            var failedNames = new List<string>();
-            bool hasAnyLaterEnabled;
-
-            if (settings.File1Enabled)
-            {
-                var result = await TryLaunchSlotWithRetryAsync(settings.File1Path, SlotKind.TeamsDefault);
-                if (result.Launched)
-                {
-                    launchedNames.Add(SettingsManager.GetSlotDisplayName(1, settings.File1Path, 100));
-                }
-                else if (result.Failed)
-                {
-                    failedNames.Add(SettingsManager.GetSlotDisplayName(1, settings.File1Path, 100));
-                }
-
-                hasAnyLaterEnabled = settings.File2Enabled || settings.File3Enabled || settings.File4Enabled;
-                if (hasAnyLaterEnabled)
-                    await Task.Delay(InterAppLaunchDelayMs);
-            }
-
-            if (settings.File2Enabled)
-            {
-                var result = await TryLaunchSlotWithRetryAsync(settings.File2Path, SlotKind.OutlookDefault);
-                if (result.Launched)
-                {
-                    launchedNames.Add(SettingsManager.GetSlotDisplayName(2, settings.File2Path, 100));
-                }
-                else if (result.Failed)
-                {
-                    failedNames.Add(SettingsManager.GetSlotDisplayName(2, settings.File2Path, 100));
-                }
-
-                hasAnyLaterEnabled = settings.File3Enabled || settings.File4Enabled;
-                if (hasAnyLaterEnabled)
-                    await Task.Delay(InterAppLaunchDelayMs);
-            }
-
-            if (settings.File3Enabled)
-            {
-                var result = await TryLaunchSlotWithRetryAsync(settings.File3Path, SlotKind.CustomOnly);
-                if (result.Launched)
-                {
-                    launchedNames.Add(SettingsManager.GetSlotDisplayName(3, settings.File3Path, 100));
-                }
-                else if (result.Failed)
-                {
-                    failedNames.Add(SettingsManager.GetSlotDisplayName(3, settings.File3Path, 100));
-                }
-
-                hasAnyLaterEnabled = settings.File4Enabled;
-                if (hasAnyLaterEnabled)
-                    await Task.Delay(InterAppLaunchDelayMs);
-            }
-
-            if (settings.File4Enabled)
-            {
-                var result = await TryLaunchSlotWithRetryAsync(settings.File4Path, SlotKind.CustomOnly);
-                if (result.Launched)
-                {
-                    launchedNames.Add(SettingsManager.GetSlotDisplayName(4, settings.File4Path, 100));
-                }
-                else if (result.Failed)
-                {
-                    failedNames.Add(SettingsManager.GetSlotDisplayName(4, settings.File4Path, 100));
-                }
-            }
-
-            if (failedNames.Count > 0)
-            {
-                string failMsg = failedNames.Count == 1
-                    ? $"{failedNames[0]} failed to launch."
-                    : $"{failedNames.Count} files failed to launch.";
-
-                notify("FileStarter", failMsg, ToolTipIcon.Error);
-            }
-            else if (launchedNames.Count > 0 && settings.EnableDesktopNotifications)
-            {
-                string msg = launchedNames.Count == 1
-                    ? $"{launchedNames[0]} launched."
-                    : $"{launchedNames.Count} files launched.";
-
-                notify("FileStarter", msg, ToolTipIcon.Info);
-            }
-
-            if (launchedNames.Count > 0)
-            {
-                Logger.Info($"TryLaunch: launched {launchedNames.Count} item(s).");
-                return true;
-            }
-
-            return false;
-        }
-
-        public bool TryLaunchTeams(bool force, AppSettings settings, Action<string, string, ToolTipIcon> notify)
-        {
-            return TryLaunchTargetsWithRetryAsync(force, settings, notify).GetAwaiter().GetResult();
-        }
-
         private enum SlotKind
         {
             TeamsDefault,
             OutlookDefault,
             CustomOnly
+        }
+
+        public async Task<bool> TryLaunchTargetsWithRetryAsync(bool force, AppSettings settings, Action<string, string, ToolTipIcon> notify)
+        {
+            if (!force && !settings.AutoStartTeamsEnabled)
+                return false;
+
+            var launchedNames = new List<string>();
+            var failedNames = new List<string>();
+
+            await TryLaunchEnabledSlotAsync(settings.File1Enabled, settings.File1Path, SlotKind.TeamsDefault, 1, settings, launchedNames, failedNames, settings.File2Enabled || settings.File3Enabled || settings.File4Enabled);
+            await TryLaunchEnabledSlotAsync(settings.File2Enabled, settings.File2Path, SlotKind.OutlookDefault, 2, settings, launchedNames, failedNames, settings.File3Enabled || settings.File4Enabled);
+            await TryLaunchEnabledSlotAsync(settings.File3Enabled, settings.File3Path, SlotKind.CustomOnly, 3, settings, launchedNames, failedNames, settings.File4Enabled);
+            await TryLaunchEnabledSlotAsync(settings.File4Enabled, settings.File4Path, SlotKind.CustomOnly, 4, settings, launchedNames, failedNames, false);
+
+            NotifyOutcome(launchedNames, failedNames, settings.EnableDesktopNotifications, notify);
+            return launchedNames.Count > 0;
+        }
+
+        public bool TryLaunchTeams(bool force, AppSettings settings, Action<string, string, ToolTipIcon> notify)
+            => TryLaunchTargetsWithRetryAsync(force, settings, notify).GetAwaiter().GetResult();
+
+        private async Task TryLaunchEnabledSlotAsync(
+            bool enabled,
+            string? path,
+            SlotKind kind,
+            int slotIndex,
+            AppSettings settings,
+            List<string> launchedNames,
+            List<string> failedNames,
+            bool delayAfter)
+        {
+            if (!enabled)
+                return;
+
+            var result = await TryLaunchSlotWithRetryAsync(path, kind);
+            string displayName = SettingsManager.GetSlotDisplayName(slotIndex, path, 100);
+
+            if (result.Launched)
+                launchedNames.Add(displayName);
+            else if (result.Failed)
+                failedNames.Add(displayName);
+
+            if (delayAfter)
+                await Task.Delay(InterAppLaunchDelayMs);
+        }
+
+        private static void NotifyOutcome(List<string> launchedNames, List<string> failedNames, bool desktopNotificationsEnabled, Action<string, string, ToolTipIcon> notify)
+        {
+            if (failedNames.Count > 0)
+            {
+                string failMsg = failedNames.Count == 1
+                    ? $"{failedNames[0]} failed to launch."
+                    : $"{failedNames.Count} files failed to launch.";
+                notify("FileStarter", failMsg, ToolTipIcon.Error);
+                return;
+            }
+
+            if (launchedNames.Count > 0 && desktopNotificationsEnabled)
+            {
+                string msg = launchedNames.Count == 1
+                    ? $"{launchedNames[0]} launched."
+                    : $"{launchedNames.Count} files launched.";
+                notify("FileStarter", msg, ToolTipIcon.Info);
+            }
         }
 
         private async Task<LaunchAttemptResult> TryLaunchSlotWithRetryAsync(string? customPath, SlotKind kind)
@@ -148,9 +106,14 @@ namespace TeamsTrayStarter
 
             return kind switch
             {
-                SlotKind.TeamsDefault => await TryLaunchDefaultTeamsWithRetryAsync(),
-                SlotKind.OutlookDefault => await TryLaunchDefaultOutlookWithRetryAsync(),
-                SlotKind.CustomOnly => new LaunchAttemptResult(false, false),
+                SlotKind.TeamsDefault => await TryLaunchDefaultAppWithRetryAsync(
+                    "Teams",
+                    IsTeamsRunning,
+                    GetTeamsLaunchTargets()),
+                SlotKind.OutlookDefault => await TryLaunchDefaultAppWithRetryAsync(
+                    "Outlook",
+                    IsOutlookRunning,
+                    GetOutlookLaunchTargets()),
                 _ => new LaunchAttemptResult(false, false)
             };
         }
@@ -169,10 +132,7 @@ namespace TeamsTrayStarter
                 for (int attempt = 1; attempt <= MaxLaunchAttempts; attempt++)
                 {
                     if (isExe && IsExecutableRunning(targetPath))
-                    {
-                        Logger.Info($"TryLaunchCustomTarget: already running: {targetPath}");
                         return new LaunchAttemptResult(false, false);
-                    }
 
                     try
                     {
@@ -182,22 +142,14 @@ namespace TeamsTrayStarter
                             UseShellExecute = true
                         });
 
-                        Logger.Info($"TryLaunchCustomTarget: launch issued for {targetPath} (attempt {attempt}).");
-
-                        if (isExe)
-                        {
-                            await Task.Delay(PostLaunchVerifyDelayMs);
-                            if (IsExecutableRunning(targetPath))
-                            {
-                                Logger.Info($"TryLaunchCustomTarget: verified running: {targetPath}");
-                                return new LaunchAttemptResult(true, false);
-                            }
-                            Logger.Warn($"TryLaunchCustomTarget: process did not appear after launch: {targetPath}");
-                        }
-                        else
-                        {
+                        if (!isExe)
                             return new LaunchAttemptResult(true, false);
-                        }
+
+                        await Task.Delay(PostLaunchVerifyDelayMs);
+                        if (IsExecutableRunning(targetPath))
+                            return new LaunchAttemptResult(true, false);
+
+                        Logger.Warn($"TryLaunchCustomTarget: process did not appear after launch: {targetPath}");
                     }
                     catch (Exception ex)
                     {
@@ -205,10 +157,7 @@ namespace TeamsTrayStarter
                     }
 
                     if (attempt < MaxLaunchAttempts)
-                    {
-                        Logger.Info($"TryLaunchCustomTarget: retrying {targetPath} after {RetryDelayMs} ms.");
                         await Task.Delay(RetryDelayMs);
-                    }
                 }
 
                 Logger.Warn($"TryLaunchCustomTarget: all attempts failed for {targetPath}");
@@ -221,112 +170,58 @@ namespace TeamsTrayStarter
             }
         }
 
-        private async Task<LaunchAttemptResult> TryLaunchDefaultTeamsWithRetryAsync()
+        private async Task<LaunchAttemptResult> TryLaunchDefaultAppWithRetryAsync(
+            string appDisplayName,
+            Func<bool> isRunning,
+            IEnumerable<string> launchTargets)
         {
             Exception? lastEx = null;
+
             for (int attempt = 1; attempt <= MaxLaunchAttempts; attempt++)
             {
-                if (IsTeamsRunning())
-                {
-                    Logger.Info("TryLaunchDefaultTeams: Teams already running.");
+                if (isRunning())
                     return new LaunchAttemptResult(false, false);
-                }
 
-                bool launchIssued = false;
-                foreach (var target in GetTeamsLaunchTargets())
-                {
-                    try
-                    {
-                        Logger.Info($"TryLaunchDefaultTeams: using {target} (attempt {attempt}).");
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = target,
-                            UseShellExecute = true
-                        });
-                        launchIssued = true;
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        lastEx = ex;
-                        Logger.Warn($"TryLaunchDefaultTeams: failed target {target} => {ex.Message}");
-                    }
-                }
-
-                if (launchIssued)
+                if (TryStartFirstAvailableTarget(launchTargets, out lastEx))
                 {
                     await Task.Delay(PostLaunchVerifyDelayMs);
-                    if (IsTeamsRunning())
-                    {
-                        Logger.Info("TryLaunchDefaultTeams: Teams verified as running.");
+                    if (isRunning())
                         return new LaunchAttemptResult(true, false);
-                    }
-                    Logger.Warn("TryLaunchDefaultTeams: Teams not detected after launch.");
+
+                    Logger.Warn($"TryLaunchDefault{appDisplayName}: {appDisplayName} not detected after launch.");
                 }
 
                 if (attempt < MaxLaunchAttempts)
-                {
-                    Logger.Info($"TryLaunchDefaultTeams: retrying after {RetryDelayMs} ms.");
                     await Task.Delay(RetryDelayMs);
-                }
             }
 
-            Logger.Error("TryLaunchDefaultTeams: all launch attempts failed.", lastEx ?? new Exception("Unknown Teams error"));
+            Logger.Error($"TryLaunchDefault{appDisplayName}: all launch attempts failed.", lastEx ?? new Exception($"Unknown {appDisplayName} error"));
             return new LaunchAttemptResult(false, true);
         }
 
-        private async Task<LaunchAttemptResult> TryLaunchDefaultOutlookWithRetryAsync()
+        private static bool TryStartFirstAvailableTarget(IEnumerable<string> targets, out Exception? lastEx)
         {
-            Exception? lastEx = null;
-            for (int attempt = 1; attempt <= MaxLaunchAttempts; attempt++)
+            lastEx = null;
+
+            foreach (var target in targets)
             {
-                if (IsOutlookRunning())
+                try
                 {
-                    Logger.Info("TryLaunchDefaultOutlook: Outlook already running.");
-                    return new LaunchAttemptResult(false, false);
-                }
-
-                bool launchIssued = false;
-                foreach (var target in GetOutlookLaunchTargets())
-                {
-                    try
+                    Process.Start(new ProcessStartInfo
                     {
-                        Logger.Info($"TryLaunchDefaultOutlook: using {target} (attempt {attempt}).");
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = target,
-                            UseShellExecute = true
-                        });
-                        launchIssued = true;
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        lastEx = ex;
-                        Logger.Warn($"TryLaunchDefaultOutlook: failed target {target} => {ex.Message}");
-                    }
+                        FileName = target,
+                        UseShellExecute = true
+                    });
+                    return true;
                 }
-
-                if (launchIssued)
+                catch (Exception ex)
                 {
-                    await Task.Delay(PostLaunchVerifyDelayMs);
-                    if (IsOutlookRunning())
-                    {
-                        Logger.Info("TryLaunchDefaultOutlook: Outlook verified as running.");
-                        return new LaunchAttemptResult(true, false);
-                    }
-                    Logger.Warn("TryLaunchDefaultOutlook: Outlook not detected after launch.");
-                }
-
-                if (attempt < MaxLaunchAttempts)
-                {
-                    Logger.Info($"TryLaunchDefaultOutlook: retrying after {RetryDelayMs} ms.");
-                    await Task.Delay(RetryDelayMs);
+                    lastEx = ex;
+                    Logger.Warn($"TryStartTarget: failed target {target} => {ex.Message}");
                 }
             }
 
-            Logger.Error("TryLaunchDefaultOutlook: all launch attempts failed.", lastEx ?? new Exception("Unknown Outlook error"));
-            return new LaunchAttemptResult(false, true);
+            return false;
         }
 
         private static IEnumerable<string> GetTeamsLaunchTargets()
@@ -336,7 +231,6 @@ namespace TeamsTrayStarter
 
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-
             string newTeamsAlias = Path.Combine(localAppData, "Microsoft", "WindowsApps", "ms-teams.exe");
             string classicPerUser = Path.Combine(localAppData, "Microsoft", "Teams", "current", "Teams.exe");
             string classicMachine = Path.Combine(programFilesX86, "Microsoft", "Teams", "current", "Teams.exe");
@@ -351,7 +245,6 @@ namespace TeamsTrayStarter
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
             string programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-
             string newOutlookAlias = Path.Combine(localAppData, "Microsoft", "WindowsApps", "olk.exe");
             string office16x64 = Path.Combine(programFiles, "Microsoft Office", "root", "Office16", "OUTLOOK.EXE");
             string office16x86 = Path.Combine(programFilesX86, "Microsoft Office", "root", "Office16", "OUTLOOK.EXE");
@@ -367,22 +260,7 @@ namespace TeamsTrayStarter
         {
             try
             {
-                string[] teamsProcessNames = { "teams", "ms-teams" };
-                int currentPid = Process.GetCurrentProcess().Id;
-                foreach (var p in Process.GetProcesses())
-                {
-                    try
-                    {
-                        if (p.Id == currentPid) continue;
-                        var name = (p.ProcessName ?? "").Trim().ToLowerInvariant();
-                        if (teamsProcessNames.Contains(name))
-                            return true;
-                    }
-                    catch
-                    {
-                    }
-                }
-                return false;
+                return IsAnyProcessRunning(new[] { "teams", "ms-teams" });
             }
             catch (Exception ex)
             {
@@ -395,28 +273,33 @@ namespace TeamsTrayStarter
         {
             try
             {
-                string[] processNames = { "outlook", "olk" };
-                int currentPid = Process.GetCurrentProcess().Id;
-                foreach (var p in Process.GetProcesses())
-                {
-                    try
-                    {
-                        if (p.Id == currentPid) continue;
-                        var name = (p.ProcessName ?? "").Trim().ToLowerInvariant();
-                        if (processNames.Contains(name))
-                            return true;
-                    }
-                    catch
-                    {
-                    }
-                }
-                return false;
+                return IsAnyProcessRunning(new[] { "outlook", "olk" });
             }
             catch (Exception ex)
             {
                 Logger.Error("IsOutlookRunning: failed; assuming not running.", ex);
                 return false;
             }
+        }
+
+        private static bool IsAnyProcessRunning(IEnumerable<string> processNames)
+        {
+            var wanted = new HashSet<string>(processNames, StringComparer.OrdinalIgnoreCase);
+            int currentPid = Process.GetCurrentProcess().Id;
+
+            foreach (var process in Process.GetProcesses())
+            {
+                try
+                {
+                    if (process.Id != currentPid && wanted.Contains((process.ProcessName ?? string.Empty).Trim()))
+                        return true;
+                }
+                catch
+                {
+                }
+            }
+
+            return false;
         }
 
         private static bool IsExecutableRunning(string fullPath)
@@ -426,16 +309,19 @@ namespace TeamsTrayStarter
                 string wantedName = Path.GetFileNameWithoutExtension(fullPath).ToLowerInvariant();
                 string wantedPath = NormalizePath(fullPath);
                 int currentPid = Process.GetCurrentProcess().Id;
-                foreach (var p in Process.GetProcesses())
+
+                foreach (var process in Process.GetProcesses())
                 {
                     try
                     {
-                        if (p.Id == currentPid)
+                        if (process.Id == currentPid)
                             continue;
-                        var name = (p.ProcessName ?? "").Trim().ToLowerInvariant();
-                        if (name != wantedName)
+
+                        var processName = (process.ProcessName ?? string.Empty).Trim().ToLowerInvariant();
+                        if (processName != wantedName)
                             continue;
-                        string? processPath = TryGetProcessPath(p);
+
+                        string? processPath = TryGetProcessPath(process);
                         if (!string.IsNullOrWhiteSpace(processPath) &&
                             string.Equals(NormalizePath(processPath), wantedPath, StringComparison.OrdinalIgnoreCase))
                         {
@@ -446,6 +332,7 @@ namespace TeamsTrayStarter
                     {
                     }
                 }
+
                 return false;
             }
             catch (Exception ex)

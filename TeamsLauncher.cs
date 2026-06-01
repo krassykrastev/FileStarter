@@ -249,9 +249,36 @@ namespace TeamsTrayStarter
             string office16x64 = Path.Combine(programFiles, "Microsoft Office", "root", "Office16", "OUTLOOK.EXE");
             string office16x86 = Path.Combine(programFilesX86, "Microsoft Office", "root", "Office16", "OUTLOOK.EXE");
 
-            if (File.Exists(newOutlookAlias)) yield return newOutlookAlias;
+            // Prefer a running Outlook instance's executable path first (user is actively using it).
+            string? runningPath = null;
+            try
+            {
+                var running = Process.GetProcesses()
+                    .FirstOrDefault(p => string.Equals((p.ProcessName ?? string.Empty).Trim(), "OUTLOOK", StringComparison.OrdinalIgnoreCase) ||
+                                         string.Equals((p.ProcessName ?? string.Empty).Trim(), "olk", StringComparison.OrdinalIgnoreCase));
+                if (running != null)
+                    runningPath = TryGetProcessPath(running);
+            }
+            catch
+            {
+                // ignore and continue to fallback logic
+            }
+
+            if (!string.IsNullOrWhiteSpace(runningPath) && File.Exists(runningPath))
+            {
+                yield return runningPath;
+                yield break;
+            }
+
+            // When not running, prefer classic Office (older Outlook) over new AppX Outlook.
+            // Users explicitly installing classic Office indicates they prefer it.
             if (File.Exists(office16x64)) yield return office16x64;
             if (File.Exists(office16x86)) yield return office16x86;
+            
+            // Fall back to new Outlook only if classic is not found.
+            if (File.Exists(newOutlookAlias)) yield return newOutlookAlias;
+            
+            // Generic handlers as last resort.
             yield return "outlook.exe";
             yield return "outlook:";
         }

@@ -73,6 +73,31 @@ namespace TeamsTrayStarter
             return new TimeSpan(9, 0, 0);
         }
 
+        public static DateTime? GetNextLaunchDateTime(AppSettings settings, DateTime nowLocal)
+        {
+            // If auto-start is currently paused by a vacation window with an end date,
+            // start searching from the day after the pause ends.
+            DateTime searchStart = nowLocal;
+            if (IsAutoStartPausedByDate(settings, nowLocal) && settings.AutoStartOffUntilEnabled && settings.AutoStartOffUntilDate != null)
+            {
+                searchStart = settings.AutoStartOffUntilDate.Value.Date.AddDays(1);
+            }
+
+            for (int offset = 0; offset < 8; offset++)
+            {
+                var date = searchStart.Date.AddDays(offset);
+                var daySetting = GetDaySetting(settings, date.DayOfWeek);
+                if (!daySetting.Enabled)
+                    continue;
+
+                var candidate = date.Add(GetDayLaunchTimeOrDefault(settings, date.DayOfWeek));
+                if (candidate > nowLocal || candidate >= searchStart)
+                    return candidate;
+            }
+
+            return null;
+        }
+
         public static string ShortenDisplayName(string text, int maxLength = 12)
         {
             if (string.IsNullOrWhiteSpace(text))

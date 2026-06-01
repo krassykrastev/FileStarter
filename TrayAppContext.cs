@@ -128,7 +128,21 @@ namespace TeamsTrayStarter
             _currentIcon?.Dispose();
             _currentIcon = TrayIconFactory.CreateSemaphoreIcon(effectiveAutoStart, TrayIconSize);
             _trayIcon.Icon = _currentIcon;
-            _trayIcon.Text = effectiveAutoStart ? "Auto-start ON" : "Auto-start OFF";
+            // Compute a user-friendly next-launch tooltip when possible.
+            var next = SettingsManager.GetNextLaunchDateTime(_settings, DateTime.Now);
+            bool pausedByDate = SettingsManager.IsAutoStartPausedByDate(_settings, DateTime.Now) && _settings.AutoStartOffUntilEnabled;
+
+            if (next.HasValue && (effectiveAutoStart || pausedByDate))
+            {
+                string prefix = pausedByDate ? "Autostart-OFF, next " : "Autostart-ON, next ";
+                // day/month then hh:mm
+                string nextStr = next.Value.ToString("dd/MM HH:mm");
+                _trayIcon.Text = prefix + nextStr;
+            }
+            else
+            {
+                _trayIcon.Text = effectiveAutoStart ? "Auto-start ON" : "Auto-start OFF";
+            }
         }
 
         private void ToggleAutoStartMaster()

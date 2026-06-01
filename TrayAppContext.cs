@@ -134,7 +134,7 @@ namespace TeamsTrayStarter
 
             if (next.HasValue && (effectiveAutoStart || pausedByDate))
             {
-                string prefix = pausedByDate ? "Autostart-OFF, next " : "Autostart-ON, next ";
+                string prefix = pausedByDate ? "Auto-start OFF, next " : "Auto-start ON, next ";
                 // day/month then hh:mm
                 string nextStr = next.Value.ToString("dd/MM HH:mm");
                 _trayIcon.Text = prefix + nextStr;

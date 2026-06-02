@@ -16,6 +16,7 @@ namespace TeamsTrayStarter
         private readonly ToolStripMenuItem _desktopNotificationsItem;
         private readonly Scheduler _scheduler;
         private readonly System.Windows.Forms.Timer _singleLeftClickTimer;
+        private readonly System.Windows.Forms.Timer _tooltipUpdateTimer;
 
         private AppSettings _settings;
         private System.Drawing.Icon? _currentIcon;
@@ -47,6 +48,9 @@ namespace TeamsTrayStarter
                 _singleLeftClickTimer.Stop();
                 ToggleAutoStartMaster();
             };
+
+            _tooltipUpdateTimer = new System.Windows.Forms.Timer();
+            _tooltipUpdateTimer.Tick += (_, __) => UpdateTrayUi();
 
             _trayIcon.MouseClick += TrayIcon_MouseClick;
             _trayIcon.MouseDoubleClick += TrayIcon_MouseDoubleClick;
@@ -132,17 +136,71 @@ namespace TeamsTrayStarter
             var next = SettingsManager.GetNextLaunchDateTime(_settings, DateTime.Now);
             bool pausedByDate = SettingsManager.IsAutoStartPausedByDate(_settings, DateTime.Now) && _settings.AutoStartOffUntilEnabled;
 
-            if (next.HasValue && (effectiveAutoStart || pausedByDate))
+            if (pausedByDate && _settings.AutoStartOffUntilDate.HasValue)
             {
-                string prefix = pausedByDate ? "Auto-start OFF, next " : "Auto-start ON, next ";
-                // day/month then hh:mm
+                // Show the "until" date when paused by date
+                string untilStr = _settings.AutoStartOffUntilDate.Value.ToString("dd/MM HH:mm");
+                _trayIcon.Text = "Auto-start OFF until " + untilStr;
+            }
+            else if (next.HasValue && effectiveAutoStart)
+            {
+                // Show the next launch date when auto-start is ON
                 string nextStr = next.Value.ToString("dd/MM HH:mm");
-                _trayIcon.Text = prefix + nextStr;
+                _trayIcon.Text = "Auto-start ON, next " + nextStr;
             }
             else
             {
                 _trayIcon.Text = effectiveAutoStart ? "Auto-start ON" : "Auto-start OFF";
             }
+
+            ScheduleNextTooltipUpdate();
+        }
+
+        private void ScheduleNextTooltipUpdate()
+        {
+            _tooltipUpdateTimer.Stop();
+
+            var now = DateTime.Now;
+            var next = SettingsManager.GetNextLaunchDateTime(_settings, now);
+            bool pausedByDate = SettingsManager.IsAutoStartPausedByDate(_settings, now) && _settings.AutoStartOffUntilEnabled;
+
+            // Determine the next event time that requires a tooltip update
+            DateTime? nextUpdateTime = null;
+
+            if (pausedByDate && _settings.AutoStartOffUntilDate.HasValue)
+            {
+                // Next update is when the "until" date is reached
+                nextUpdateTime = _settings.AutoStartOffUntilDate.Value;
+            }
+            else if (next.HasValue)
+            {
+                // Next update is when the next launch time is reached
+                nextUpdateTime = next.Value;
+            }
+
+            int interval;
+            if (nextUpdateTime.HasValue)
+            {
+                var delay = nextUpdateTime.Value - now;
+                if (delay.TotalMilliseconds <= 0)
+                {
+                    // Already passed, update again very soon
+                    interval = 100;
+                }
+                else
+                {
+                    // Calculate delay, but cap at 24 hours to handle edge cases
+                    interval = (int)Math.Min(delay.TotalMilliseconds, 86400000);
+                }
+            }
+            else
+            {
+                // No scheduled event, check again every minute
+                interval = 60000;
+            }
+
+            _tooltipUpdateTimer.Interval = interval;
+            _tooltipUpdateTimer.Start();
         }
 
         private void ToggleAutoStartMaster()
@@ -384,6 +442,8 @@ namespace TeamsTrayStarter
         {
             _singleLeftClickTimer.Stop();
             _singleLeftClickTimer.Dispose();
+            _tooltipUpdateTimer.Stop();
+            _tooltipUpdateTimer.Dispose();
             _scheduler.Dispose();
             _trayIcon.Visible = false;
             _trayIcon.Dispose();

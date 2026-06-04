@@ -1,4 +1,4 @@
-Download the zipped .exe here: [https://github.com/krassykrastev/FileStarter/releases](https://github.com/krassykrastev/FileStarter/releases))
+Download the zipped .exe here: [https://github.com/krassykrastev/FileStarter/releases](https://github.com/krassykrastev/FileStarter/releases)
 
 04 Jun 2026
 

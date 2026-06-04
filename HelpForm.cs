@@ -152,7 +152,7 @@ namespace TeamsTrayStarter
   - Run FileStarter on Windows startup -> Starts FileStarter automatically when you sign in to Windows.
   - Start VPN first -> starts VPN first and only when it's connected then starts the selected file(s).
   - Settings -> Opens the Settings window where you can configure schedule and files.
-  - Open log file -> Opens the FileStarter log file.
+  - Open log -> Opens the FileStarter log.
   - Help -> Opens this Help window.
   - About -> Shows version and author information.
   - Exit -> Closes FileStarter.

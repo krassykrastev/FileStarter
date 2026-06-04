@@ -30,7 +30,7 @@ namespace TeamsTrayStarter
             var instructionLabel = new Label
             {
                 AutoSize = false,
-                Text = "Choose the Windows VPN connection that FileStarter should connect before launching your selected files/apps.",
+                Text = "Choose the VPN connection to start first:",
                 Location = new Point(16, 16),
                 Size = new Size(ClientSize.Width - 32, 40)
             };

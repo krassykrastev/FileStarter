@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,6 +11,7 @@ namespace TeamsTrayStarter
     {
         private static readonly object _sync = new object();
         private const long MaxLogSizeBytes = 1_048_576; // 1 MB
+
         private static readonly Regex EntryStartRegex = new Regex(
             @"^(?<ts>\d{4}-\d{2}-\d{2} \d{2}:\d{2}) \[(?<level>[A-Z]+)\] (?<msg>.*)$",
             RegexOptions.Compiled);
@@ -28,9 +30,9 @@ namespace TeamsTrayStarter
             // no-op by design
         }
 
-        public static void Warn(string message) => Write("WARN", message);
+        public static void Warn(string message) => Write("OTHER", message);
         public static void Change(string message) => Write("CHANGE", message);
-        public static void Error(string message, Exception ex) => Write("ERROR", message + Environment.NewLine + ex);
+        public static void Error(string message, Exception ex) => Write("OTHER", message + Environment.NewLine + ex);
 
         public static void Clear()
         {
@@ -68,7 +70,7 @@ namespace TeamsTrayStarter
                     new ParsedLogEntry
                     {
                         Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
-                        Level = "ERROR",
+                        Level = "OTHER",
                         Message = "Failed to read log entries." + Environment.NewLine + ex.Message
                     }
                 };
@@ -116,6 +118,7 @@ namespace TeamsTrayStarter
 
                 var entries = ParseEntries(existing);
                 bool removedAny = false;
+
                 for (int i = entries.Count - 1; i >= 0; i--)
                 {
                     var entry = entries[i];
@@ -186,7 +189,7 @@ namespace TeamsTrayStarter
         public sealed class ParsedLogEntry
         {
             public string Timestamp { get; set; } = string.Empty;
-            public string Level { get; set; } = "INFO";
+            public string Level { get; set; } = "OTHER";
             public string Message { get; set; } = string.Empty;
         }
     }

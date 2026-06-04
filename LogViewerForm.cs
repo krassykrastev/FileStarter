@@ -17,8 +17,7 @@ namespace TeamsTrayStarter
         private readonly Label _showLabel;
         private readonly Button _clearLogButton;
         private readonly Button _exportLogButton;
-        private readonly CheckBox _alertFilterButton;
-        private readonly CheckBox _errorFilterButton;
+        private readonly CheckBox _otherFilterButton;
         private readonly CheckBox _changeFilterButton;
         private readonly RichTextBox _logRichTextBox;
         private readonly FileSystemWatcher _fileWatcher;
@@ -89,7 +88,7 @@ namespace TeamsTrayStarter
             _showLabel = new Label
             {
                 AutoSize = false,
-                Width = 72,
+                Width = 62,
                 Height = 36,
                 Text = "Show:",
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -99,16 +98,16 @@ namespace TeamsTrayStarter
                 UseCompatibleTextRendering = false
             };
 
-            _alertFilterButton = CreateFilterToggle("Alerts", 134);
-            _errorFilterButton = CreateFilterToggle("Errors", 126);
+            _otherFilterButton = CreateFilterToggle("Other", 126);
             _changeFilterButton = CreateFilterToggle("Changes", 132);
 
             _actionsPanel.Controls.Add(_clearLogButton);
             _actionsPanel.Controls.Add(_exportLogButton);
+
             _filtersPanel.Controls.Add(_showLabel);
-            _filtersPanel.Controls.Add(_alertFilterButton);
-            _filtersPanel.Controls.Add(_errorFilterButton);
+            _filtersPanel.Controls.Add(_otherFilterButton);
             _filtersPanel.Controls.Add(_changeFilterButton);
+
             _topPanel.Controls.Add(_actionsPanel);
             _topPanel.Controls.Add(_filtersPanel);
 
@@ -154,14 +153,15 @@ namespace TeamsTrayStarter
             string fileName = Path.GetFileName(Logger.LogFilePath);
             if (string.IsNullOrWhiteSpace(fileName))
                 fileName = "app.log";
-            Directory.CreateDirectory(directory);
 
+            Directory.CreateDirectory(directory);
             _fileWatcher = new FileSystemWatcher(directory, fileName)
             {
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
                 EnableRaisingEvents = true,
                 IncludeSubdirectories = false
             };
+
             _fileWatcher.Changed += (_, __) => ScheduleRefresh();
             _fileWatcher.Created += (_, __) => ScheduleRefresh();
             _fileWatcher.Deleted += (_, __) => ScheduleRefresh();
@@ -192,6 +192,7 @@ namespace TeamsTrayStarter
                 TextAlign = ContentAlignment.MiddleCenter,
                 UseCompatibleTextRendering = true
             };
+
             button.FlatAppearance.BorderColor = Color.FromArgb(214, 219, 226);
             button.FlatAppearance.BorderSize = 1;
             button.FlatAppearance.MouseDownBackColor = Color.FromArgb(235, 238, 242);
@@ -218,6 +219,7 @@ namespace TeamsTrayStarter
                 UseCompatibleTextRendering = true,
                 Tag = text
             };
+
             check.FlatAppearance.BorderSize = 1;
             check.Paint += FilterToggle_Paint;
             check.CheckedChanged += (_, __) =>
@@ -226,6 +228,7 @@ namespace TeamsTrayStarter
                 check.Invalidate();
                 LoadAndRenderLog();
             };
+
             ApplyFilterStyle(check);
             return check;
         }
@@ -239,6 +242,7 @@ namespace TeamsTrayStarter
             const int reservedLeftWidth = 28;
             const int reservedRightWidth = 28;
             const int checkGlyphWidth = 12;
+
             var checkRect = new Rectangle(reservedLeftWidth - checkGlyphWidth, 0, checkGlyphWidth, check.ClientSize.Height);
             var textRect = new Rectangle(reservedLeftWidth, 0, check.ClientSize.Width - reservedLeftWidth - reservedRightWidth, check.ClientSize.Height);
 
@@ -282,7 +286,7 @@ namespace TeamsTrayStarter
         {
             _actionsPanel.Location = new Point(10, 10);
             _filtersPanel.Location = new Point(Math.Max(10, ClientSize.Width - _filtersPanel.PreferredSize.Width - 16), 10);
-            _showLabel.Top = Math.Max(0, (_alertFilterButton.Height - _showLabel.Height) / 2);
+            _showLabel.Top = Math.Max(0, (_otherFilterButton.Height - _showLabel.Height) / 2);
         }
 
         private void ScheduleRefresh()
@@ -309,6 +313,7 @@ namespace TeamsTrayStarter
             int firstVisibleLine = 0;
             int selectionStart = 0;
             bool preserveView = _hasLoadedOnce && _logRichTextBox.IsHandleCreated;
+
             if (preserveView)
             {
                 firstVisibleLine = GetFirstVisibleLine();
@@ -338,7 +343,7 @@ namespace TeamsTrayStarter
             {
                 var entry = entries[i];
                 var kind = GetKind(entry.Level);
-                if (kind == LogEntryKind.Other || !ShouldShow(kind))
+                if (!ShouldShow(kind))
                     continue;
 
                 Color kindColor = GetColor(kind);
@@ -352,6 +357,7 @@ namespace TeamsTrayStarter
 
             _logRichTextBox.SelectionStart = preserveView ? Math.Min(selectionStart, _logRichTextBox.TextLength) : 0;
             _logRichTextBox.SelectionLength = 0;
+
             if (preserveView)
                 RestoreFirstVisibleLine(firstVisibleLine);
 
@@ -371,6 +377,7 @@ namespace TeamsTrayStarter
             {
                 int nextOn = message.IndexOf("ON", index, StringComparison.Ordinal);
                 int nextOff = message.IndexOf("OFF", index, StringComparison.Ordinal);
+
                 if (nextOn < 0 && nextOff < 0)
                 {
                     _logRichTextBox.SelectionColor = defaultColor;
@@ -398,8 +405,7 @@ namespace TeamsTrayStarter
         private bool ShouldShow(LogEntryKind kind)
             => kind switch
             {
-                LogEntryKind.Alert => _alertFilterButton.Checked,
-                LogEntryKind.Error => _errorFilterButton.Checked,
+                LogEntryKind.Other => _otherFilterButton.Checked,
                 LogEntryKind.Change => _changeFilterButton.Checked,
                 _ => false
             };
@@ -407,17 +413,18 @@ namespace TeamsTrayStarter
         private static LogEntryKind GetKind(string level)
             => level.ToUpperInvariant() switch
             {
-                "WARN" => LogEntryKind.Alert,
-                "ERROR" => LogEntryKind.Error,
                 "CHANGE" => LogEntryKind.Change,
+                // backward compatibility for older logs
+                "WARN" => LogEntryKind.Other,
+                "ERROR" => LogEntryKind.Other,
+                "OTHER" => LogEntryKind.Other,
                 _ => LogEntryKind.Other
             };
 
         private static string GetEmoji(LogEntryKind kind)
             => kind switch
             {
-                LogEntryKind.Alert => "⚠️",
-                LogEntryKind.Error => "❌",
+                LogEntryKind.Other => "❗",
                 LogEntryKind.Change => "🔄",
                 _ => "•"
             };
@@ -425,8 +432,7 @@ namespace TeamsTrayStarter
         private static Color GetColor(LogEntryKind kind)
             => kind switch
             {
-                LogEntryKind.Alert => Color.DarkOrange,
-                LogEntryKind.Error => Color.Crimson,
+                LogEntryKind.Other => Color.Crimson,
                 LogEntryKind.Change => Color.RoyalBlue,
                 _ => Color.Black
             };
@@ -450,6 +456,7 @@ namespace TeamsTrayStarter
                 AddExtension = true,
                 OverwritePrompt = true
             };
+
             if (dialog.ShowDialog(this) != DialogResult.OK)
                 return;
 
@@ -459,7 +466,7 @@ namespace TeamsTrayStarter
             {
                 var entry = entries[i];
                 var kind = GetKind(entry.Level);
-                if (kind == LogEntryKind.Other || !ShouldShow(kind))
+                if (!ShouldShow(kind))
                     continue;
 
                 sb.Append(GetEmoji(kind)).Append(' ')
@@ -482,10 +489,8 @@ namespace TeamsTrayStarter
 
         private enum LogEntryKind
         {
-            Alert,
-            Error,
-            Change,
-            Other
+            Other,
+            Change
         }
     }
 }

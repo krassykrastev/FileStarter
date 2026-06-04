@@ -18,10 +18,10 @@ It is designed to be simple, reliable, and unobtrusive — perfect for automatin
 - Support for up to 4 files or applications  
 - Vacation mode (temporarily disable auto-start using date range)  
 - System tray integration with quick controls  
-- Desktop notifications for launches and issues  
 - Prevents launching duplicate instances  
 - Built-in retry mechanism and launch verification  
 - Startup health check for missing custom files  
+- Start VPN first -> starts VPN first and only when it's connected then starts the selected file(s). 
 
 ---
 
@@ -43,7 +43,7 @@ Right-click the tray icon to:
 
 - Enable/disable Auto-start  
 - Run FileStarter on Windows startup  
-- Enable/disable desktop notifications  
+- Start VPN first  
 - Open Settings  
 - Open log file  
 - Empty the log file  

@@ -470,7 +470,7 @@ namespace TeamsTrayStarter
         {
             _trayIcon.BalloonTipTitle = title;
             _trayIcon.BalloonTipText = message;
-            _trayIcon.BalloonTipIcon = icon;
+            _trayIcon.BalloonTipIcon = ToolTipIcon.None;
             _trayIcon.ShowBalloonTip(4000);
         }
 

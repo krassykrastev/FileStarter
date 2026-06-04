@@ -5,7 +5,7 @@ Download the zipped .exe here: [https://github.com/krassykrastev/FileStarter/rel
 # 🚀 FileStarter
 
 
-FileStarter is a lightweight Windows tray application that automatically launches apps or files based on a configurable schedule. It is designed to be simple, reliable, and unobtrusive — perfect for automating your daily startup routine.
+FileStarter is a lightweight Windows tray application written in C# with Visual Studio Code that automatically launches apps or files based on a configurable schedule. It is designed to be simple, reliable, and unobtrusive — perfect for automating your daily startup routine.
 
 ---
 

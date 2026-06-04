@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -75,8 +76,6 @@ namespace TeamsTrayStarter
 
         public static DateTime? GetNextLaunchDateTime(AppSettings settings, DateTime nowLocal)
         {
-            // If auto-start is currently paused by a vacation window with an end date,
-            // start searching from the day after the pause ends.
             DateTime searchStart = nowLocal;
             if (IsAutoStartPausedByDate(settings, nowLocal) && settings.AutoStartOffUntilEnabled && settings.AutoStartOffUntilDate != null)
             {
@@ -102,10 +101,8 @@ namespace TeamsTrayStarter
         {
             if (string.IsNullOrWhiteSpace(text))
                 return text;
-
             if (maxLength <= 3)
                 return text.Length <= maxLength ? text : text.Substring(0, maxLength);
-
             return text.Length <= maxLength ? text : text.Substring(0, maxLength - 3) + "...";
         }
 
@@ -166,7 +163,6 @@ namespace TeamsTrayStarter
 
             DateTime today = nowLocal.Date;
             DateTime start = settings.AutoStartOffFromDate.Value.Date;
-
             if (settings.AutoStartOffUntilEnabled && settings.AutoStartOffUntilDate != null)
             {
                 DateTime end = settings.AutoStartOffUntilDate.Value.Date;
@@ -196,6 +192,8 @@ namespace TeamsTrayStarter
                 AutoStartTeamsEnabled = source.AutoStartTeamsEnabled,
                 RunAppAtStartup = source.RunAppAtStartup,
                 EnableDesktopNotifications = source.EnableDesktopNotifications,
+                StartVpnFirstEnabled = source.StartVpnFirstEnabled,
+                VpnConnectionName = source.VpnConnectionName,
                 Mon = CloneDay(source.Mon),
                 Tue = CloneDay(source.Tue),
                 Wed = CloneDay(source.Wed),
@@ -222,6 +220,8 @@ namespace TeamsTrayStarter
         {
             return before.RunAppAtStartup != after.RunAppAtStartup ||
                    before.EnableDesktopNotifications != after.EnableDesktopNotifications ||
+                   before.StartVpnFirstEnabled != after.StartVpnFirstEnabled ||
+                   !StringEqualsForSettings(before.VpnConnectionName, after.VpnConnectionName) ||
                    HasDayChange(before.Mon, after.Mon) ||
                    HasDayChange(before.Tue, after.Tue) ||
                    HasDayChange(before.Wed, after.Wed) ||
@@ -248,6 +248,8 @@ namespace TeamsTrayStarter
             var changes = new List<string>();
             AddChange(changes, "Run at Windows startup", before.RunAppAtStartup, after.RunAppAtStartup);
             AddChange(changes, "Desktop notifications", before.EnableDesktopNotifications, after.EnableDesktopNotifications);
+            AddChange(changes, "Start VPN first", before.StartVpnFirstEnabled, after.StartVpnFirstEnabled);
+            AddChange(changes, "VPN connection name", before.VpnConnectionName, after.VpnConnectionName);
             AddChange(changes, "Monday", before.Mon, after.Mon);
             AddChange(changes, "Tuesday", before.Tue, after.Tue);
             AddChange(changes, "Wednesday", before.Wed, after.Wed);
@@ -334,6 +336,8 @@ namespace TeamsTrayStarter
         public bool AutoStartTeamsEnabled { get; set; } = true;
         public bool RunAppAtStartup { get; set; } = true;
         public bool EnableDesktopNotifications { get; set; } = true;
+        public bool StartVpnFirstEnabled { get; set; }
+        public string? VpnConnectionName { get; set; }
         public DayLaunchSetting Mon { get; set; } = new DayLaunchSetting { Enabled = true, Time = "09:00" };
         public DayLaunchSetting Tue { get; set; } = new DayLaunchSetting { Enabled = true, Time = "09:00" };
         public DayLaunchSetting Wed { get; set; } = new DayLaunchSetting { Enabled = true, Time = "09:00" };
@@ -353,7 +357,6 @@ namespace TeamsTrayStarter
         public string? File3Path { get; set; }
         public bool File4Enabled { get; set; }
         public string? File4Path { get; set; }
-
         public static AppSettings CreateDefault() => new AppSettings();
     }
 }

@@ -14,10 +14,10 @@ namespace TeamsTrayStarter
         private readonly ToolStripMenuItem _autoStartToggleItem;
         private readonly ToolStripMenuItem _runAtStartupItem;
         private readonly ToolStripMenuItem _desktopNotificationsItem;
+        private readonly ToolStripMenuItem _startVpnFirstItem;
         private readonly Scheduler _scheduler;
         private readonly System.Windows.Forms.Timer _singleLeftClickTimer;
         private readonly System.Windows.Forms.Timer _tooltipUpdateTimer;
-
         private AppSettings _settings;
         private System.Drawing.Icon? _currentIcon;
         private SettingsForm? _settingsForm;
@@ -30,31 +30,26 @@ namespace TeamsTrayStarter
             _settings = SettingsManager.Load();
             Logger.Init(SettingsManager.AppDataFolder);
             SaveIfAutoStartTransitionDue();
-
             _scheduler = new Scheduler(new TeamsLauncher(), () => _settings, SaveSettings, ShowBalloon);
             _autoStartToggleItem = CreateMenuItem("Auto-start ON", SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now), ToggleAutoStartMaster);
             _runAtStartupItem = CreateMenuItem("Run FileStarter on Windows startup", _settings.RunAppAtStartup, ToggleRunAtStartup);
             _desktopNotificationsItem = CreateMenuItem("Enable desktop notifications", _settings.EnableDesktopNotifications, ToggleDesktopNotifications);
-
+            _startVpnFirstItem = CreateMenuItem("Start VPN first", _settings.StartVpnFirstEnabled, ToggleStartVpnFirst);
             _trayIcon = new NotifyIcon
             {
                 Visible = true,
                 ContextMenuStrip = BuildContextMenu()
             };
-
             _singleLeftClickTimer = new System.Windows.Forms.Timer { Interval = SystemInformation.DoubleClickTime };
             _singleLeftClickTimer.Tick += (_, __) =>
             {
                 _singleLeftClickTimer.Stop();
                 ToggleAutoStartMaster();
             };
-
             _tooltipUpdateTimer = new System.Windows.Forms.Timer();
             _tooltipUpdateTimer.Tick += (_, __) => UpdateTrayUi();
-
             _trayIcon.MouseClick += TrayIcon_MouseClick;
             _trayIcon.MouseDoubleClick += TrayIcon_MouseDoubleClick;
-
             TryApplyRunAtStartupSetting();
             UpdateTrayUi();
             _scheduler.StartOrReschedule();
@@ -66,6 +61,7 @@ namespace TeamsTrayStarter
             menu.Items.Add(_autoStartToggleItem);
             menu.Items.Add(_runAtStartupItem);
             menu.Items.Add(_desktopNotificationsItem);
+            menu.Items.Add(_startVpnFirstItem);
             menu.Items.Add(new ToolStripMenuItem("Settings...", null, (_, __) => OpenSettings()));
             menu.Items.Add(new ToolStripMenuItem("Open log...", null, (_, __) => OpenLogViewer()));
             menu.Items.Add(new ToolStripMenuItem("Help", null, (_, __) => OpenHelp()));
@@ -122,29 +118,25 @@ namespace TeamsTrayStarter
         private void UpdateTrayUi()
         {
             SaveIfAutoStartTransitionDue();
-
             bool effectiveAutoStart = SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now);
             _autoStartToggleItem.Checked = effectiveAutoStart;
             _autoStartToggleItem.Text = effectiveAutoStart ? "Auto-start ON" : "Auto-start OFF";
             _runAtStartupItem.Checked = _settings.RunAppAtStartup;
             _desktopNotificationsItem.Checked = _settings.EnableDesktopNotifications;
-
+            _startVpnFirstItem.Checked = _settings.StartVpnFirstEnabled;
             _currentIcon?.Dispose();
             _currentIcon = TrayIconFactory.CreateSemaphoreIcon(effectiveAutoStart, TrayIconSize);
             _trayIcon.Icon = _currentIcon;
-            // Compute a user-friendly next-launch tooltip when possible.
+
             var next = SettingsManager.GetNextLaunchDateTime(_settings, DateTime.Now);
             bool pausedByDate = SettingsManager.IsAutoStartPausedByDate(_settings, DateTime.Now) && _settings.AutoStartOffUntilEnabled;
-
             if (pausedByDate && _settings.AutoStartOffUntilDate.HasValue)
             {
-                // Show the "until" date when paused by date
                 string untilStr = _settings.AutoStartOffUntilDate.Value.ToString("dd/MM HH:mm");
                 _trayIcon.Text = "Auto-start OFF until " + untilStr;
             }
             else if (next.HasValue && effectiveAutoStart)
             {
-                // Show the next launch date when auto-start is ON
                 string nextStr = next.Value.ToString("dd/MM HH:mm");
                 _trayIcon.Text = "Auto-start ON, next " + nextStr;
             }
@@ -159,22 +151,16 @@ namespace TeamsTrayStarter
         private void ScheduleNextTooltipUpdate()
         {
             _tooltipUpdateTimer.Stop();
-
             var now = DateTime.Now;
             var next = SettingsManager.GetNextLaunchDateTime(_settings, now);
             bool pausedByDate = SettingsManager.IsAutoStartPausedByDate(_settings, now) && _settings.AutoStartOffUntilEnabled;
-
-            // Determine the next event time that requires a tooltip update
             DateTime? nextUpdateTime = null;
-
             if (pausedByDate && _settings.AutoStartOffUntilDate.HasValue)
             {
-                // Next update is when the "until" date is reached
                 nextUpdateTime = _settings.AutoStartOffUntilDate.Value;
             }
             else if (next.HasValue)
             {
-                // Next update is when the next launch time is reached
                 nextUpdateTime = next.Value;
             }
 
@@ -184,18 +170,15 @@ namespace TeamsTrayStarter
                 var delay = nextUpdateTime.Value - now;
                 if (delay.TotalMilliseconds <= 0)
                 {
-                    // Already passed, update again very soon
                     interval = 100;
                 }
                 else
                 {
-                    // Calculate delay, but cap at 24 hours to handle edge cases
                     interval = (int)Math.Min(delay.TotalMilliseconds, 86400000);
                 }
             }
             else
             {
-                // No scheduled event, check again every minute
                 interval = 60000;
             }
 
@@ -246,6 +229,57 @@ namespace TeamsTrayStarter
             {
                 Logger.Error("Failed to toggle desktop notifications.", ex);
                 ShowBalloon("FileStarter", "Failed to change desktop notification setting. See log.", ToolTipIcon.Error);
+            }
+        }
+
+        private void ToggleStartVpnFirst()
+        {
+            try
+            {
+                if (!_settings.StartVpnFirstEnabled)
+                {
+                    var vpnConnections = TeamsLauncher.GetAvailableVpnConnectionNames();
+                    if (vpnConnections.Count == 0)
+                    {
+                        MessageBox.Show(
+                            "No Windows VPN connections were found on this PC.",
+                            "No VPN connections found",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                        _settings.StartVpnFirstEnabled = false;
+                        _settings.VpnConnectionName = null;
+                        UpdateTrayUi();
+                        return;
+                    }
+
+                    using var selectionForm = new VpnSelectionForm(vpnConnections);
+                    if (selectionForm.ShowDialog() != DialogResult.OK || string.IsNullOrWhiteSpace(selectionForm.SelectedConnectionName))
+                    {
+                        _settings.StartVpnFirstEnabled = false;
+                        _settings.VpnConnectionName = null;
+                        UpdateTrayUi();
+                        return;
+                    }
+
+                    _settings.StartVpnFirstEnabled = true;
+                    _settings.VpnConnectionName = selectionForm.SelectedConnectionName.Trim();
+                    Logger.Change("Start VPN first turned ON");
+                    Logger.Change($"VPN connection selected: {_settings.VpnConnectionName}");
+                }
+                else
+                {
+                    _settings.StartVpnFirstEnabled = false;
+                    _settings.VpnConnectionName = null;
+                    Logger.Change("Start VPN first turned OFF");
+                }
+
+                SettingsManager.Save(_settings);
+                UpdateTrayUi();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Failed to toggle Start VPN first.", ex);
+                ShowBalloon("FileStarter", "Failed to change VPN startup setting. See log.", ToolTipIcon.Error);
             }
         }
 
@@ -307,6 +341,7 @@ namespace TeamsTrayStarter
             {
                 if (_settingsForm == null)
                     return;
+
                 if (_settingsForm.Accepted)
                 {
                     var before = SettingsManager.Clone(_settings);
@@ -317,6 +352,7 @@ namespace TeamsTrayStarter
                     {
                         SettingsManager.LogSettingsChanges(before, _settings);
                     }
+
                     UpdateTrayUi();
                     _scheduler.StartOrReschedule();
                 }

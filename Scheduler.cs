@@ -1,3 +1,4 @@
+
 using System;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -23,6 +24,7 @@ namespace TeamsTrayStarter
             _getSettings = getSettings;
             _saveSettings = saveSettings;
             _notify = notify;
+
             _timer = new System.Windows.Forms.Timer();
             _timer.Tick += (_, __) =>
             {
@@ -72,8 +74,8 @@ namespace TeamsTrayStarter
         {
             var settings = _getSettings();
             ApplyPendingAutoStartTransition(settings);
-
             var now = DateTime.Now;
+
             if (_launchInProgress ||
                 !SettingsManager.IsEffectiveAutoStartEnabled(settings, now) ||
                 !ShouldLaunchNow(settings, now))
@@ -89,7 +91,7 @@ namespace TeamsTrayStarter
         {
             try
             {
-                await _launcher.TryLaunchTargetsWithRetryAsync(false, settings, _notify);
+                await _launcher.TryLaunchTargetsWithRetryAsync(false, settings, _notify, _saveSettings);
             }
             catch (Exception ex)
             {

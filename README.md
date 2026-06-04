@@ -1,13 +1,11 @@
-[FileStarter1.6.zip](https://github.com/user-attachments/files/28606660/FileStarter1.6.zip)
+Download the zipped .exe here: [https://github.com/krassykrastev/FileStarter/releases](https://github.com/krassykrastev/FileStarter/releases))
 
 04 Jun 2026
 
 # 🚀 FileStarter
 
 
-FileStarter is a lightweight Windows tray application that automatically launches apps or files based on a configurable schedule.
-
-It is designed to be simple, reliable, and unobtrusive — perfect for automating your daily startup routine.
+FileStarter is a lightweight Windows tray application that automatically launches apps or files based on a configurable schedule. It is designed to be simple, reliable, and unobtrusive — perfect for automating your daily startup routine.
 
 ---
 
@@ -21,18 +19,7 @@ It is designed to be simple, reliable, and unobtrusive — perfect for automatin
 - Prevents launching duplicate instances  
 - Built-in retry mechanism and launch verification  
 - Startup health check for missing custom files  
-- Start VPN first -> starts VPN first and only when it's connected then starts the selected file(s). 
-
----
-
-## 🧠 How it works:
-
-FileStarter runs quietly in the system tray and:
-
-- Calculates your configured schedule  
-- Determines the correct day and time  
-- Launches selected apps/files automatically  
-- Validates launches and retries if needed  
+- Start VPN first -> starts VPN first and only when it's connected then starts the selected file(s) 
 
 ---
 
@@ -45,16 +32,15 @@ Right-click the tray icon to:
 - Run FileStarter on Windows startup  
 - Start VPN first  
 - Open Settings  
-- Open log file  
-- Empty the log file  
+- Open log  
 - Help  
 - About  
-- Exit the app  
+- Exit
 
 ### Quick actions:
 
-- Single-click → toggle Auto-start ON/OFF  
-- Double-click → open Settings  
+- Single mouse click → toggle Auto-start ON/OFF  
+- Double mouse click → open Settings  
 
 ---
 
@@ -86,18 +72,16 @@ Perfect for holidays / time off:
 
 ---
 
-## 🧪 Startup Health Check:
+## 🧪 Built-in Health Check:
 
 - Detects missing custom files at startup  
-- Logs warnings  
-- Shows notification for broken paths  
+- Shows notifications for broken paths or other alerts 
 
 ---
 
 ## 📝 Logging & Diagnostics:
 
-- Full logging of scheduler and launches  
-- Error and warning tracking  
+- Logs changes and other important events   
 - Log file is automatically cleared at **1 MB** to prevent growth
 
 ---
@@ -108,15 +92,7 @@ Perfect for holidays / time off:
 2. Extract it anywhere you like
 3. Run `.exe` or place a shortcut on your desktop and run it from there.
 
-Note: Windows may show a message that the app is not digitally signed. This is normal, as I don't have a code signing certificate  (which requires annual subscription) , so I can't digitally sign the app. If this happens click on "More info -> Run anyway" 
-
----
-
-## 💡 Example Use Cases
-
-- Auto launch up to 4 files, i.e. MS Teams, MS Outlook
-- Start work tools daily
-- Open files at a specific time
+Note: Windows may show a message that the app is not digitally signed. This is normal, as I don't have a code signing certificate (which requires an annual subscription), so I can't digitally sign the app. If this happens click on "More info -> Run anyway" 
 
 ---
 

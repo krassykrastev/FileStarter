@@ -13,7 +13,7 @@ namespace TeamsTrayStarter
         private readonly NotifyIcon _trayIcon;
         private readonly ToolStripMenuItem _autoStartToggleItem;
         private readonly ToolStripMenuItem _runAtStartupItem;
-        private readonly ToolStripMenuItem _desktopNotificationsItem;
+    
         private readonly ToolStripMenuItem _startVpnFirstItem;
         private readonly Scheduler _scheduler;
         private readonly System.Windows.Forms.Timer _singleLeftClickTimer;
@@ -33,7 +33,6 @@ namespace TeamsTrayStarter
             _scheduler = new Scheduler(new TeamsLauncher(), () => _settings, SaveSettings, ShowBalloon);
             _autoStartToggleItem = CreateMenuItem("Auto-start ON", SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now), ToggleAutoStartMaster);
             _runAtStartupItem = CreateMenuItem("Run FileStarter on Windows startup", _settings.RunAppAtStartup, ToggleRunAtStartup);
-            _desktopNotificationsItem = CreateMenuItem("Enable desktop notifications", _settings.EnableDesktopNotifications, ToggleDesktopNotifications);
             _startVpnFirstItem = CreateMenuItem("Start VPN first", _settings.StartVpnFirstEnabled, ToggleStartVpnFirst);
             _trayIcon = new NotifyIcon
             {
@@ -60,7 +59,6 @@ namespace TeamsTrayStarter
             var menu = new ContextMenuStrip();
             menu.Items.Add(_autoStartToggleItem);
             menu.Items.Add(_runAtStartupItem);
-            menu.Items.Add(_desktopNotificationsItem);
             menu.Items.Add(_startVpnFirstItem);
             menu.Items.Add(new ToolStripMenuItem("Settings...", null, (_, __) => OpenSettings()));
             menu.Items.Add(new ToolStripMenuItem("Open log...", null, (_, __) => OpenLogViewer()));
@@ -122,7 +120,6 @@ namespace TeamsTrayStarter
             _autoStartToggleItem.Checked = effectiveAutoStart;
             _autoStartToggleItem.Text = effectiveAutoStart ? "Auto-start ON" : "Auto-start OFF";
             _runAtStartupItem.Checked = _settings.RunAppAtStartup;
-            _desktopNotificationsItem.Checked = _settings.EnableDesktopNotifications;
             _startVpnFirstItem.Checked = _settings.StartVpnFirstEnabled;
             _currentIcon?.Dispose();
             _currentIcon = TrayIconFactory.CreateSemaphoreIcon(effectiveAutoStart, TrayIconSize);
@@ -213,22 +210,6 @@ namespace TeamsTrayStarter
             {
                 Logger.Error("Failed to toggle Run-at-startup.", ex);
                 ShowBalloon("FileStarter", "Failed to change startup setting. See log.", ToolTipIcon.Error);
-            }
-        }
-
-        private void ToggleDesktopNotifications()
-        {
-            try
-            {
-                _settings.EnableDesktopNotifications = !_settings.EnableDesktopNotifications;
-                SettingsManager.Save(_settings);
-                Logger.Change(_settings.EnableDesktopNotifications ? "Desktop notifications turned ON" : "Desktop notifications turned OFF");
-                UpdateTrayUi();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Failed to toggle desktop notifications.", ex);
-                ShowBalloon("FileStarter", "Failed to change desktop notification setting. See log.", ToolTipIcon.Error);
             }
         }
 

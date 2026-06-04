@@ -191,7 +191,6 @@ namespace TeamsTrayStarter
             {
                 AutoStartTeamsEnabled = source.AutoStartTeamsEnabled,
                 RunAppAtStartup = source.RunAppAtStartup,
-                EnableDesktopNotifications = source.EnableDesktopNotifications,
                 StartVpnFirstEnabled = source.StartVpnFirstEnabled,
                 VpnConnectionName = source.VpnConnectionName,
                 Mon = CloneDay(source.Mon),
@@ -219,7 +218,6 @@ namespace TeamsTrayStarter
         public static bool HasSettingsChanges(AppSettings before, AppSettings after)
         {
             return before.RunAppAtStartup != after.RunAppAtStartup ||
-                   before.EnableDesktopNotifications != after.EnableDesktopNotifications ||
                    before.StartVpnFirstEnabled != after.StartVpnFirstEnabled ||
                    !StringEqualsForSettings(before.VpnConnectionName, after.VpnConnectionName) ||
                    HasDayChange(before.Mon, after.Mon) ||
@@ -247,7 +245,6 @@ namespace TeamsTrayStarter
         {
             var changes = new List<string>();
             AddChange(changes, "Run at Windows startup", before.RunAppAtStartup, after.RunAppAtStartup);
-            AddChange(changes, "Desktop notifications", before.EnableDesktopNotifications, after.EnableDesktopNotifications);
             AddChange(changes, "Start VPN first", before.StartVpnFirstEnabled, after.StartVpnFirstEnabled);
             AddChange(changes, "VPN connection name", before.VpnConnectionName, after.VpnConnectionName);
             AddChange(changes, "Monday", before.Mon, after.Mon);
@@ -335,7 +332,6 @@ namespace TeamsTrayStarter
     {
         public bool AutoStartTeamsEnabled { get; set; } = true;
         public bool RunAppAtStartup { get; set; } = true;
-        public bool EnableDesktopNotifications { get; set; } = true;
         public bool StartVpnFirstEnabled { get; set; }
         public string? VpnConnectionName { get; set; }
         public DayLaunchSetting Mon { get; set; } = new DayLaunchSetting { Enabled = true, Time = "09:00" };

@@ -79,7 +79,7 @@ Perfect for holidays / time off:
 
 1. Download the `.zip`
 2. Extract it anywhere you like
-3. Run `.exe` or place a shortcut on your desktop and run it from there.
+3. Run the `.exe` or place a shortcut on your desktop and run it from there.
 
 Note: Windows may show a message that the app is not digitally signed. This is normal, as I don't have a code signing certificate (which requires an annual subscription), so I can't digitally sign the app. If this happens click on "More info -> Run anyway" 
 

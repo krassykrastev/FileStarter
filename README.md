@@ -1,4 +1,4 @@
-<img width="1792" height="592" alt="FileStarter cover 1200x400" src="https://github.com/user-attachments/assets/d3ca9bc0-f06a-42a0-93c9-fac4d5164cb9" />
+<img width="1792" height="592" alt="FileStarter cover 1200x400" src="https://github.com/user-attachments/assets/230a2e4e-191e-48d0-9a73-aa2303d72b0a" />
 
 Download the zipped .exe here: [https://github.com/krassykrastev/FileStarter/releases](https://github.com/krassykrastev/FileStarter/releases)
 

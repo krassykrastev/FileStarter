@@ -1,4 +1,7 @@
+
 using System;
+using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
@@ -9,46 +12,80 @@ namespace TeamsTrayStarter
         private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
         private const string RunValueName = "FileStarter";
         private const int TrayIconSize = 32;
+        private const int WM_NULL = 0x0000;
 
         private readonly NotifyIcon _trayIcon;
+        private readonly ContextMenuStrip _trayMenu;
+        private readonly Form _menuHostForm;
         private readonly ToolStripMenuItem _autoStartToggleItem;
         private readonly ToolStripMenuItem _runAtStartupItem;
-    
         private readonly ToolStripMenuItem _startVpnFirstItem;
         private readonly Scheduler _scheduler;
         private readonly System.Windows.Forms.Timer _singleLeftClickTimer;
         private readonly System.Windows.Forms.Timer _tooltipUpdateTimer;
+
         private AppSettings _settings;
-        private System.Drawing.Icon? _currentIcon;
+        private Icon? _currentIcon;
         private SettingsForm? _settingsForm;
         private AboutForm? _aboutForm;
         private HelpForm? _helpForm;
         private LogViewerForm? _logViewerForm;
+
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool PostMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
         public TrayAppContext()
         {
             _settings = SettingsManager.Load();
             Logger.Init(SettingsManager.AppDataFolder);
             SaveIfAutoStartTransitionDue();
+
             _scheduler = new Scheduler(new TeamsLauncher(), () => _settings, SaveSettings, ShowBalloon);
-            _autoStartToggleItem = CreateMenuItem("Auto-start ON", SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now), ToggleAutoStartMaster);
-            _runAtStartupItem = CreateMenuItem("Run FileStarter on Windows startup", _settings.RunAppAtStartup, ToggleRunAtStartup);
-            _startVpnFirstItem = CreateMenuItem("Start VPN first", _settings.StartVpnFirstEnabled, ToggleStartVpnFirst);
+
+            _autoStartToggleItem = CreateMenuItem(
+                "Auto-start ON",
+                SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now),
+                ToggleAutoStartMaster);
+            _runAtStartupItem = CreateMenuItem(
+                "Run FileStarter on Windows startup",
+                _settings.RunAppAtStartup,
+                ToggleRunAtStartup);
+            _startVpnFirstItem = CreateMenuItem(
+                "Start VPN first",
+                _settings.StartVpnFirstEnabled,
+                ToggleStartVpnFirst);
+
+            _trayMenu = BuildContextMenu();
+            _menuHostForm = CreateMenuHostForm();
+            _trayMenu.Closed += (_, __) =>
+            {
+                if (_menuHostForm.Visible)
+                    _menuHostForm.Hide();
+
+                PostMessage(_menuHostForm.Handle, WM_NULL, IntPtr.Zero, IntPtr.Zero);
+            };
+
             _trayIcon = new NotifyIcon
             {
-                Visible = true,
-                ContextMenuStrip = BuildContextMenu()
+                Visible = true
             };
+
             _singleLeftClickTimer = new System.Windows.Forms.Timer { Interval = SystemInformation.DoubleClickTime };
             _singleLeftClickTimer.Tick += (_, __) =>
             {
                 _singleLeftClickTimer.Stop();
                 ToggleAutoStartMaster();
             };
+
             _tooltipUpdateTimer = new System.Windows.Forms.Timer();
             _tooltipUpdateTimer.Tick += (_, __) => UpdateTrayUi();
+
             _trayIcon.MouseClick += TrayIcon_MouseClick;
             _trayIcon.MouseDoubleClick += TrayIcon_MouseDoubleClick;
+
             TryApplyRunAtStartupSetting();
             UpdateTrayUi();
             _scheduler.StartOrReschedule();
@@ -69,6 +106,20 @@ namespace TeamsTrayStarter
             return menu;
         }
 
+        private static Form CreateMenuHostForm()
+        {
+            return new Form
+            {
+                ShowInTaskbar = false,
+                FormBorderStyle = FormBorderStyle.None,
+                StartPosition = FormStartPosition.Manual,
+                Size = new Size(1, 1),
+                Location = new Point(-32000, -32000),
+                Opacity = 0,
+                TopMost = true
+            };
+        }
+
         private static ToolStripMenuItem CreateMenuItem(string text, bool isChecked, Action onClick)
         {
             var item = new ToolStripMenuItem(text)
@@ -82,11 +133,18 @@ namespace TeamsTrayStarter
 
         private void TrayIcon_MouseClick(object? sender, MouseEventArgs e)
         {
-            if (e.Button != MouseButtons.Left)
+            if (e.Button == MouseButtons.Left)
+            {
+                _singleLeftClickTimer.Stop();
+                _singleLeftClickTimer.Start();
                 return;
+            }
 
-            _singleLeftClickTimer.Stop();
-            _singleLeftClickTimer.Start();
+            if (e.Button == MouseButtons.Right)
+            {
+                _singleLeftClickTimer.Stop();
+                ShowTrayContextMenu();
+            }
         }
 
         private void TrayIcon_MouseDoubleClick(object? sender, MouseEventArgs e)
@@ -96,6 +154,16 @@ namespace TeamsTrayStarter
 
             _singleLeftClickTimer.Stop();
             OpenSettings();
+        }
+
+        private void ShowTrayContextMenu()
+        {
+            Point cursorPos = Cursor.Position;
+            _menuHostForm.Location = cursorPos;
+            _menuHostForm.Show();
+            _menuHostForm.Activate();
+            SetForegroundWindow(_menuHostForm.Handle);
+            _trayMenu.Show(_menuHostForm, _menuHostForm.PointToClient(cursorPos));
         }
 
         private void SaveSettings(AppSettings settings)
@@ -121,6 +189,7 @@ namespace TeamsTrayStarter
             _autoStartToggleItem.Text = effectiveAutoStart ? "Auto-start ON" : "Auto-start OFF";
             _runAtStartupItem.Checked = _settings.RunAppAtStartup;
             _startVpnFirstItem.Checked = _settings.StartVpnFirstEnabled;
+
             _currentIcon?.Dispose();
             _currentIcon = TrayIconFactory.CreateSemaphoreIcon(effectiveAutoStart, TrayIconSize);
             _trayIcon.Icon = _currentIcon;
@@ -152,6 +221,7 @@ namespace TeamsTrayStarter
             var next = SettingsManager.GetNextLaunchDateTime(_settings, now);
             bool pausedByDate = SettingsManager.IsAutoStartPausedByDate(_settings, now) && _settings.AutoStartOffUntilEnabled;
             DateTime? nextUpdateTime = null;
+
             if (pausedByDate && _settings.AutoStartOffUntilDate.HasValue)
             {
                 nextUpdateTime = _settings.AutoStartOffUntilDate.Value;
@@ -165,14 +235,7 @@ namespace TeamsTrayStarter
             if (nextUpdateTime.HasValue)
             {
                 var delay = nextUpdateTime.Value - now;
-                if (delay.TotalMilliseconds <= 0)
-                {
-                    interval = 100;
-                }
-                else
-                {
-                    interval = (int)Math.Min(delay.TotalMilliseconds, 86400000);
-                }
+                interval = delay.TotalMilliseconds <= 0 ? 100 : (int)Math.Min(delay.TotalMilliseconds, 86400000);
             }
             else
             {
@@ -464,6 +527,8 @@ namespace TeamsTrayStarter
             _scheduler.Dispose();
             _trayIcon.Visible = false;
             _trayIcon.Dispose();
+            _trayMenu.Dispose();
+            _menuHostForm.Dispose();
             _currentIcon?.Dispose();
             ExitThread();
         }

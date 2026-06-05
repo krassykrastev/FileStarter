@@ -1,5 +1,6 @@
 
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -97,8 +98,50 @@ namespace TeamsTrayStarter
             menu.Items.Add(_autoStartToggleItem);
             menu.Items.Add(_runAtStartupItem);
             menu.Items.Add(_startVpnFirstItem);
-            menu.Items.Add(new ToolStripMenuItem("Settings...", null, (_, __) => OpenSettings()));
-            menu.Items.Add(new ToolStripMenuItem("Open log...", null, (_, __) => OpenLogViewer()));
+            menu.Items.Add(new ToolStripMenuItem("Settings", null, (_, __) => OpenSettings()));
+            menu.Items.Add(new ToolStripMenuItem("View log", null, (_, __) => OpenLogViewer()));
+            
+            menu.Items.Add(new ToolStripMenuItem("Suggestions / bugs", null, (_, __) =>
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "https://github.com/krassykrastev/FileStarter/issues/new",
+                        UseShellExecute = true
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Failed to open Suggestions / bugs link.", ex);
+                    MessageBox.Show(
+                        "Could not open the link.",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+            }));
+            
+            menu.Items.Add(new ToolStripMenuItem("Check for new version", null, (_, __) =>
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "https://github.com/krassykrastev/FileStarter/releases",
+                        UseShellExecute = true
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Failed to open Check for new version link.", ex);
+                    MessageBox.Show(
+                        "Could not open the link.",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+            }));
             menu.Items.Add(new ToolStripMenuItem("Help", null, (_, __) => OpenHelp()));
             menu.Items.Add(new ToolStripMenuItem("About", null, (_, __) => OpenAbout()));
             menu.Items.Add(new ToolStripSeparator());

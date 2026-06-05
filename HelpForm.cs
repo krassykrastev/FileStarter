@@ -15,7 +15,7 @@ namespace TeamsTrayStarter
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            ClientSize = new Size(880, 750);
+            ClientSize = new Size(880, 800);
             Font = new Font("Segoe UI", 9F, FontStyle.Regular);
             BackColor = Color.White;
 
@@ -146,7 +146,7 @@ namespace TeamsTrayStarter
             };
 
             helpTextBox.Text =
-@"FileStarter is a lightweight Windows tray application that helps you automatically launch files or apps based on a schedule. It lets you choose which files or applications to launch and when to launch them. FileStarter is useful for automating the start of your work apps or files every day.  
+@"FileStarter is a lightweight Windows tray application that automatically launches apps or files based on a configurable schedule. It is designed to be simple, reliable, and unobtrusive — perfect for automating your daily startup routine.  
 
 • Tray icon behavior:  
   - Single click on the tray icon toggles Auto-start ON or OFF.  
@@ -158,7 +158,9 @@ namespace TeamsTrayStarter
   - Run FileStarter on Windows startup -> Starts FileStarter automatically when you sign in to Windows.  
   - Start VPN first -> starts VPN first and only when it's connected then starts the selected file(s).  
   - Settings -> Opens the Settings window where you can configure schedule and files.  
-  - Open log -> Opens the FileStarter log.  
+  - View log -> Opens the FileStarter log.
+  - Suggestions / bugs -> Leads to web form to submit a suggestion or report a bug.
+  - Check for new version -> Leads to FileStarter release web page.  
   - Help -> Opens this Help window.  
   - About -> Shows version and author information.  
   - Exit -> Closes FileStarter.  

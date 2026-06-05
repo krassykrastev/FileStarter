@@ -15,7 +15,7 @@ namespace TeamsTrayStarter
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            ClientSize = new Size(460, 250);
+            ClientSize = new Size(460, 210);
             BackColor = Color.White;
 
             // App name at the top
@@ -79,54 +79,6 @@ namespace TeamsTrayStarter
                 Font = new Font("Segoe UI", 9F, FontStyle.Regular),
                 Location = new Point(22, 120),
                 BackColor = Color.White
-            };
-
-            var feedbackLinkLabel = new LinkLabel
-            {
-                Text = "For suggestions or bugs click here",
-                AutoSize = true,
-                MaximumSize = new Size(ClientSize.Width - 44, 0),
-                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
-                Location = new Point(22, 160),
-                LinkBehavior = LinkBehavior.HoverUnderline,
-                BackColor = Color.White
-            };
-
-            const string clickableText = "click here";
-            int feedbackClickableStart = feedbackLinkLabel.Text.IndexOf(clickableText, StringComparison.Ordinal);
-
-            if (feedbackClickableStart >= 0)
-            {
-                feedbackLinkLabel.Links.Add(
-                    feedbackClickableStart,
-                    clickableText.Length,
-                    "https://github.com/krassykrastev/FileStarter/issues/new");
-            }
-
-            feedbackLinkLabel.LinkClicked += (_, e) =>
-            {
-                try
-                {
-                    if (e.Link != null &&
-                        e.Link.LinkData is string target &&
-                        !string.IsNullOrWhiteSpace(target))
-                    {
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = target,
-                            UseShellExecute = true
-                        });
-                    }
-                }
-                catch
-                {
-                    MessageBox.Show(
-                        this,
-                        "Could not open the link.",
-                        "Open link failed",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                }
             };
 
             // Bottom panel (support link + OK button)
@@ -213,7 +165,6 @@ namespace TeamsTrayStarter
             Controls.Add(versionLabel);
             Controls.Add(authorLabel);
             Controls.Add(copyrightLabel);
-            Controls.Add(feedbackLinkLabel);
             Controls.Add(bottomPanel);
 
             AcceptButton = okButton;

@@ -234,7 +234,7 @@ namespace TeamsTrayStarter
             _startVpnFirstItem.Checked = _settings.StartVpnFirstEnabled;
 
             _currentIcon?.Dispose();
-            _currentIcon = TrayIconFactory.CreateSemaphoreIcon(effectiveAutoStart, TrayIconSize);
+            _currentIcon = TrayIconFactory.CreateAutoStartStateIcon(effectiveAutoStart, TrayIconSize);
             _trayIcon.Icon = _currentIcon;
 
             var next = SettingsManager.GetNextLaunchDateTime(_settings, DateTime.Now);

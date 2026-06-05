@@ -21,7 +21,7 @@ namespace TeamsTrayStarter
             g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
             g.Clear(Color.Transparent);
 
-            g.DrawIcon(baseIcon, new Rectangle(0, 0, renderSize, renderSize));
+            g.DrawIcon(baseIcon, new Rectangle(-1, -1, renderSize + 4, renderSize + 4));
 
             if (!enabled)
             {

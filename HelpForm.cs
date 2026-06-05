@@ -17,20 +17,23 @@ namespace TeamsTrayStarter
             ShowInTaskbar = false;
             ClientSize = new Size(880, 750);
             Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            BackColor = Color.White;
 
             // Bottom fixed area (icon + support link + OK button)
             var bottomPanel = new Panel
             {
                 Location = new Point(0, ClientSize.Height - 72),
                 Size = new Size(ClientSize.Width, 72),
-                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
+                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                BackColor = Color.White
             };
 
             // App icon in the bottom-left
             var iconBox = new PictureBox
             {
                 Size = new Size(48, 48),
-                SizeMode = PictureBoxSizeMode.StretchImage
+                SizeMode = PictureBoxSizeMode.StretchImage,
+                BackColor = Color.White
             };
 
             try
@@ -55,7 +58,8 @@ namespace TeamsTrayStarter
                 Text = "Enjoying FileStarter? Buy me a beer ;-)",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9F, FontStyle.Regular),
-                LinkBehavior = LinkBehavior.HoverUnderline
+                LinkBehavior = LinkBehavior.HoverUnderline,
+                BackColor = Color.White
             };
 
             const string clickablePart = "Buy me a beer ;-)";
@@ -100,8 +104,10 @@ namespace TeamsTrayStarter
                 Width = 90,
                 Height = 32,
                 FlatStyle = FlatStyle.System,
-                Anchor = AnchorStyles.Right | AnchorStyles.Top
+                Anchor = AnchorStyles.Right | AnchorStyles.Top,
+                BackColor = Color.White
             };
+
             okButton.Click += (_, __) => Close();
 
             // ---- Vertical centering inside bottom panel ----
@@ -111,7 +117,6 @@ namespace TeamsTrayStarter
             Size supportSize = TextRenderer.MeasureText(
                 supportLinkLabel.Text,
                 supportLinkLabel.Font);
-
             int supportY = (bottomPanel.Height - supportSize.Height) / 2;
             supportLinkLabel.Location = new Point(iconBox.Right + 16, supportY);
 
@@ -136,32 +141,33 @@ namespace TeamsTrayStarter
                 ShortcutsEnabled = false,
                 TabStop = false,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
-                Cursor = Cursors.Default
+                Cursor = Cursors.Default,
+                BackColor = Color.White
             };
 
             helpTextBox.Text =
-@"FileStarter is a lightweight Windows tray application that helps you automatically launch files or apps based on a schedule. It lets you choose which files or applications to launch and when to launch them. FileStarter is useful for automating the start of your work apps or files every day.
+@"FileStarter is a lightweight Windows tray application that helps you automatically launch files or apps based on a schedule. It lets you choose which files or applications to launch and when to launch them. FileStarter is useful for automating the start of your work apps or files every day.  
 
-• Tray icon behavior:
-  - Single click on the tray icon toggles Auto-start ON or OFF.
-  - Double click on the tray icon opens Settings.
-  - Right click on the tray icon opens the context menu.
+• Tray icon behavior:  
+  - Single click on the tray icon toggles Auto-start ON or OFF.  
+  - Double click on the tray icon opens Settings.  
+  - Right click on the tray icon opens the context menu.  
 
-• Context menu options:
-  - Auto-start ON / OFF -> Enables or disables automatic launching.
-  - Run FileStarter on Windows startup -> Starts FileStarter automatically when you sign in to Windows.
-  - Start VPN first -> starts VPN first and only when it's connected then starts the selected file(s).
-  - Settings -> Opens the Settings window where you can configure schedule and files.
-  - Open log -> Opens the FileStarter log.
-  - Help -> Opens this Help window.
-  - About -> Shows version and author information.
-  - Exit -> Closes FileStarter.
-
-• What you can control in Settings:
-  - Auto-start schedule -> Choose the days of the week and the launch time for each day.
-  - Select file(s) to launch -> Choose up to 4 files or applications to launch.
-  - File 1 / File 2 'Default' buttons -> Quickly restore File 1 to MS Teams and File 2 to MS Outlook.
-  - File 3 / File 4 'Clear' buttons -> Clear the selected file and uncheck that file row.
+• Context menu options:  
+  - Auto-start ON / OFF -> Enables or disables automatic launching.  
+  - Run FileStarter on Windows startup -> Starts FileStarter automatically when you sign in to Windows.  
+  - Start VPN first -> starts VPN first and only when it's connected then starts the selected file(s).  
+  - Settings -> Opens the Settings window where you can configure schedule and files.  
+  - Open log -> Opens the FileStarter log.  
+  - Help -> Opens this Help window.  
+  - About -> Shows version and author information.  
+  - Exit -> Closes FileStarter.  
+  
+• What you can control in Settings:  
+  - Auto-start schedule -> Choose the days of the week and the launch time for each day.  
+  - Select file(s) to launch -> Choose up to 4 files or applications to launch.  
+  - File 1 / File 2 'Default' buttons -> Quickly restore File 1 to MS Teams and File 2 to MS Outlook.  
+  - File 3 / File 4 'Clear' buttons -> Clear the selected file and uncheck that file row.  
   - Vacation mode -> Temporarily turn auto-start OFF from a future date. Optionally set an end date using “Turn auto-start OFF until this date”.";
 
             StyleHelpText(helpTextBox);

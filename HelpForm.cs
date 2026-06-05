@@ -69,7 +69,7 @@ namespace TeamsTrayStarter
                 supportLinkLabel.Links.Add(
                     clickableStart,
                     clickablePart.Length,
-                    "https://www.paypal.com/paypalme/krasikrastev");
+                    "https://ko-fi.com/filestarter");
             }
 
             supportLinkLabel.LinkClicked += (_, e) =>
@@ -91,7 +91,7 @@ namespace TeamsTrayStarter
                 {
                     MessageBox.Show(
                         this,
-                        "Could not open the PayPal link.",
+                        "Could not open the Ko-fi link.",
                         "Open link failed",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);

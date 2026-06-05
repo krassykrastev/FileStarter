@@ -33,7 +33,9 @@ Right-click the tray icon to:
 - Run FileStarter on Windows startup  
 - Start VPN first  
 - Open Settings  
-- Open log  
+- View log 
+- Make a suggestion / report a bug
+- Check for new version 
 - Help  
 - About  
 - Exit

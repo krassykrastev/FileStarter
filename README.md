@@ -2,7 +2,7 @@
 
 
 
-#### 🔗 Download the zipped .exe here ➜ [FileStarter1.6.zip](https://github.com/user-attachments/files/28655899/FileStarter1.6.zip)
+#### 🔗 Download the zipped .exe here ➜ [https://github.com/krassykrastev/FileStarter/releases](https://github.com/krassykrastev/FileStarter/releases)
 ---
 #### 🔗 C# source files ➜ [https://github.com/krassykrastev/FileStarter](https://github.com/krassykrastev/FileStarter)
 

@@ -15,16 +15,16 @@ FileStarter is a lightweight Windows tray application written in C# with Visual 
 
 ## ✨ Features:
 
-- Launch up to 4 apps / files (Teams, Outlook, or custom files) on a configurable schedule
-- Vacation mode (temporarily disable auto-start using date range) 
-- Prevents launching duplicate instances
-- Built-in retry mechanism and launch verification
-- System tray integration with quick controls  
-- Startup health check for missing custom files  
-- Shows notifications for broken paths or other alerts 
-- Start VPN first and only when it's connected then starts the selected file(s)
-- Logs changes and other important events   
-- Log file is automatically cleared at **1 MB** to prevent growth
+🔹 Launch up to 4 apps / files (Teams, Outlook, or custom files) on a configurable schedule
+🔹 Vacation mode (temporarily disable auto-start using date range) 
+🔹 Prevents launching duplicate instances
+🔹 Built-in retry mechanism and launch verification
+🔹 System tray integration with quick controls  
+🔹 Startup health check for missing custom files  
+🔹 Shows notifications for broken paths or other alerts 
+🔹 Start VPN first and only when it's connected then starts the selected file(s)
+🔹 Logs changes and other important events   
+🔹 Log file is automatically cleared at **1 MB** to prevent growth
 
 ---
 
@@ -33,21 +33,21 @@ FileStarter is a lightweight Windows tray application written in C# with Visual 
 ### Tray icon controls:
 Right-click the tray icon to:
 
-- Enable/disable Auto-start  
-- Run FileStarter on Windows startup  
-- Start VPN first  
-- Open Settings  
-- View log 
-- Make a suggestion / report a bug
-- Check for new version 
-- Help  
-- About  
-- Exit
+🔹 Enable/disable Auto-start  
+🔹 Run FileStarter on Windows startup  
+🔹 Start VPN first  
+🔹 Open Settings  
+🔹 View log 
+🔹 Make a suggestion / report a bug
+🔹 Check for new version 
+🔹 Help  
+🔹 About  
+🔹 Exit
 
 ### Quick actions:
 
-- Single mouse click → toggle Auto-start ON/OFF  
-- Double mouse click → open Settings  
+🔹 Single mouse click → toggle Auto-start ON/OFF  
+🔹 Double mouse click → open Settings  
 
 ---
 
@@ -55,27 +55,27 @@ Right-click the tray icon to:
 
 From the Settings window you can:
 
-- Configure daily schedules (Mon–Sun)  
-- Set custom launch times per day  
-- Select apps/files for each slot  
-- Enable/disable each slot individually  
-- Configure Vacation mode  
+🔹 Configure daily schedules (Mon–Sun)  
+🔹 Set custom launch times per day  
+🔹 Select apps/files for each slot  
+🔹 Enable/disable each slot individually  
+🔹 Configure Vacation mode  
 
 ---
 
 ## 🏖 Vacation Mode: Temporarily disable auto-start using a date range:
 Perfect for holidays / time off:
-- Turn auto-start OFF from a specific date  
-- Optionally set an "until" date  
-- Auto-start resumes automatically after the period ends  
+🔹 Turn auto-start OFF from a specific date  
+🔹 Optionally set an "until" date  
+🔹 Auto-start resumes automatically after the period ends  
 
 ---
 
 ## 📂 Supported File Types:
 
-- `.exe` applications  
-- Documents (`.docx`, `.xlsx`, etc.)  
-- Any file with a default Windows association  
+🔹 `.exe` applications  
+🔹 Documents (`.docx`, `.xlsx`, etc.)  
+🔹 Any file with a default Windows association  
 
 ---
 
@@ -91,4 +91,4 @@ Note: Windows may show a message that the app is not digitally signed. This is n
 
 ## ❤️ Support this project:
 
-- Enjoying FileStarter? [Buy me a beer ;-)](https://paypal.me/krasikrastev)
+🔹 Enjoying FileStarter? [Buy me a beer ;-)](https://paypal.me/krasikrastev)

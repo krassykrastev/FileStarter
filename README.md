@@ -4,9 +4,7 @@
 
 #### 🔗 Download the zipped .exe here ➜ [https://github.com/krassykrastev/FileStarter/releases](https://github.com/krassykrastev/FileStarter/releases)
 ---
-#### 🔗 C# source files ➜ [https://github.com/krassykrastev/FileStarter](https://github.com/krassykrastev/FileStarter)
 
----
 
 # 🚀 FileStarter
 

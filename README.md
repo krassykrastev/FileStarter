@@ -91,4 +91,4 @@ Note: Windows may show a message that the app is not digitally signed. This is n
 
 ## ❤️ Support this project:
 
-🔹 Enjoying FileStarter? [Buy me a beer ;-)](https://paypal.me/krasikrastev)
+🔹 Enjoying FileStarter? [Buy me a beer ;-)](https://ko-fi.com/filestarter)

@@ -6,7 +6,6 @@
 #### 🔗 C# source files ➜ [https://github.com/krassykrastev/FileStarter](https://github.com/krassykrastev/FileStarter)
 <br>
 
-#### 04 Jun 2026
 
 # 🚀 FileStarter
 

@@ -16,14 +16,14 @@ FileStarter is a lightweight Windows tray application written in C# with Visual 
 ## ✨ Features:
 
 🔹 Launch up to 4 apps / files (Teams, Outlook, or custom files) on a configurable schedule
-🔹 Vacation mode (temporarily disable auto-start using date range) 
+🔹 Vacation mode (temporarily disable auto-start using date range)
 🔹 Prevents launching duplicate instances
 🔹 Built-in retry mechanism and launch verification
-🔹 System tray integration with quick controls  
-🔹 Startup health check for missing custom files  
-🔹 Shows notifications for broken paths or other alerts 
+🔹 System tray integration with quick controls
+🔹 Startup health check for missing custom files
+🔹 Shows notifications for broken paths or other alerts
 🔹 Start VPN first and only when it's connected then starts the selected file(s)
-🔹 Logs changes and other important events   
+🔹 Logs changes and other important events
 🔹 Log file is automatically cleared at **1 MB** to prevent growth
 
 ---

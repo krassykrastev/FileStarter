@@ -95,6 +95,11 @@ namespace TeamsTrayStarter
         private ContextMenuStrip BuildContextMenu()
         {
             var menu = new ContextMenuStrip();
+        
+            menu.Padding = new Padding(6);
+            menu.BackColor = Color.White;
+            menu.RenderMode = ToolStripRenderMode.System;
+
             menu.Items.Add(_autoStartToggleItem);
             menu.Items.Add(_runAtStartupItem);
             menu.Items.Add(_startVpnFirstItem);
@@ -201,12 +206,41 @@ namespace TeamsTrayStarter
 
         private void ShowTrayContextMenu()
         {
-            Point cursorPos = Cursor.Position;
-            _menuHostForm.Location = cursorPos;
+            var cursorPos = Cursor.Position;
+
+            // Measure menu size
+            var menuSize = _trayMenu.GetPreferredSize(Size.Empty);
+
+            // Get working area (avoids taskbar overlap)
+            var screen = Screen.FromPoint(cursorPos).WorkingArea;
+
+            // ✅ Center horizontally relative to cursor (tray icon)
+            int x = cursorPos.X - (menuSize.Width / 2);
+
+            // ✅ Default: show below cursor
+            int y = cursorPos.Y;
+
+            // ✅ If not enough space below → show above (tray scenario)
+            if (y + menuSize.Height > screen.Bottom)
+            {
+                y = cursorPos.Y - menuSize.Height;
+            }
+
+            // ✅ Clamp horizontally
+            x = Math.Max(screen.Left, Math.Min(x, screen.Right - menuSize.Width));
+
+            // ✅ Clamp vertically
+            y = Math.Max(screen.Top, Math.Min(y, screen.Bottom - menuSize.Height));
+
+            var adjustedPos = new Point(x, y);
+
+            _menuHostForm.Location = adjustedPos;
             _menuHostForm.Show();
             _menuHostForm.Activate();
+
             SetForegroundWindow(_menuHostForm.Handle);
-            _trayMenu.Show(_menuHostForm, _menuHostForm.PointToClient(cursorPos));
+
+            _trayMenu.Show(_menuHostForm, _menuHostForm.PointToClient(adjustedPos));
         }
 
         private void SaveSettings(AppSettings settings)

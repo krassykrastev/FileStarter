@@ -156,7 +156,7 @@ namespace TeamsTrayStarter
 • Context menu options:  
   - Auto-start ON / OFF -> Enables or disables automatic launching.  
   - Run FileStarter on Windows startup -> Starts FileStarter automatically when you sign in to Windows.  
-  - Start VPN first -> starts VPN first and only when it's connected then starts the selected file(s).  
+  - Start VPN first -> starts VPN on startup & ensures it's connected before starting the selected file(s).  
   - Settings -> Opens the Settings window where you can configure schedule and files.  
   - View log -> Opens the FileStarter log.
   - Suggestions / bugs -> Leads to web form to submit a suggestion or report a bug.

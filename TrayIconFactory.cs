@@ -8,6 +8,13 @@ namespace TeamsTrayStarter
 {
     public static class TrayIconFactory
     {
+        private static readonly string? _baseIconPath = ResolveBaseIconPath();
+
+        public static void Initialize()
+        {
+            _ = _baseIconPath;
+        }
+
         public static Icon CreateAutoStartStateIcon(bool enabled, int renderSize)
         {
             renderSize = Math.Clamp(renderSize, 16, 128);
@@ -15,12 +22,10 @@ namespace TeamsTrayStarter
             using Icon baseIcon = LoadBaseIcon(renderSize);
             using var bmp = new Bitmap(renderSize, renderSize, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             using var g = Graphics.FromImage(bmp);
-
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
             g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
             g.Clear(Color.Transparent);
-
             g.DrawIcon(baseIcon, new Rectangle(-1, -1, renderSize + 4, renderSize + 4));
 
             if (!enabled)
@@ -42,7 +47,7 @@ namespace TeamsTrayStarter
 
         private static void DrawBusyBadge(Graphics g, int renderSize)
         {
-            int diameter = Math.Max(20, ((renderSize * 2) / 3) -2);
+            int diameter = Math.Max(20, ((renderSize * 2) / 3) - 2);
             int margin = Math.Max(1, renderSize / 20);
             int x = renderSize - diameter - margin;
             int y = renderSize - diameter - margin;
@@ -50,12 +55,29 @@ namespace TeamsTrayStarter
 
             using var fillBrush = new SolidBrush(Color.FromArgb(196, 49, 75));
             using var borderPen = new Pen(Color.Black, 1f);
-
             g.FillEllipse(fillBrush, badgeRect);
             g.DrawEllipse(borderPen, badgeRect);
         }
 
         private static Icon LoadBaseIcon(int renderSize)
+        {
+            if (!string.IsNullOrWhiteSpace(_baseIconPath) && File.Exists(_baseIconPath))
+            {
+                return new Icon(_baseIconPath, new Size(renderSize, renderSize));
+            }
+
+            string? exePath = Environment.ProcessPath;
+            if (!string.IsNullOrWhiteSpace(exePath) && File.Exists(exePath))
+            {
+                Icon? exeIcon = Icon.ExtractAssociatedIcon(exePath);
+                if (exeIcon != null)
+                    return new Icon(exeIcon, new Size(renderSize, renderSize));
+            }
+
+            return new Icon(SystemIcons.Application, new Size(renderSize, renderSize));
+        }
+
+        private static string? ResolveBaseIconPath()
         {
             string[] candidatePaths =
             {
@@ -68,18 +90,10 @@ namespace TeamsTrayStarter
             foreach (string path in candidatePaths)
             {
                 if (File.Exists(path))
-                    return new Icon(path, new Size(renderSize, renderSize));
+                    return path;
             }
 
-            string? exePath = Environment.ProcessPath;
-            if (!string.IsNullOrWhiteSpace(exePath) && File.Exists(exePath))
-            {
-                Icon? exeIcon = Icon.ExtractAssociatedIcon(exePath);
-                if (exeIcon != null)
-                    return new Icon(exeIcon, new Size(renderSize, renderSize));
-            }
-
-            return new Icon(SystemIcons.Application, new Size(renderSize, renderSize));
+            return null;
         }
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]

@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,7 +10,6 @@ namespace TeamsTrayStarter
     {
         private static readonly object _sync = new object();
         private const long MaxLogSizeBytes = 1_048_576; // 1 MB
-
         private static readonly Regex EntryStartRegex = new Regex(
             @"^(?<ts>\d{4}-\d{2}-\d{2} \d{2}:\d{2}) \[(?<level>[A-Z]+)\] (?<msg>.*)$",
             RegexOptions.Compiled);
@@ -24,14 +22,10 @@ namespace TeamsTrayStarter
             LogFilePath = Path.Combine(appDataFolder, "app.log");
         }
 
-        // INFO logging intentionally disabled across the application.
-        public static void Info(string message)
-        {
-            // no-op by design
-        }
-
         public static void Warn(string message) => Write("OTHER", message);
+
         public static void Change(string message) => Write("CHANGE", message);
+
         public static void Error(string message, Exception ex) => Write("OTHER", message + Environment.NewLine + ex);
 
         public static void Clear()
@@ -87,7 +81,6 @@ namespace TeamsTrayStarter
                         return;
 
                     Directory.CreateDirectory(Path.GetDirectoryName(LogFilePath)!);
-
                     if (File.Exists(LogFilePath) && new FileInfo(LogFilePath).Length > MaxLogSizeBytes)
                     {
                         File.WriteAllText(LogFilePath, string.Empty, Encoding.UTF8);
@@ -118,7 +111,6 @@ namespace TeamsTrayStarter
 
                 var entries = ParseEntries(existing);
                 bool removedAny = false;
-
                 for (int i = entries.Count - 1; i >= 0; i--)
                 {
                     var entry = entries[i];

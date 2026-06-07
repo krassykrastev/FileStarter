@@ -41,27 +41,26 @@ namespace TeamsTrayStarter
 
         [DllImport("user32.dll")]
         private static extern bool PostMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
         private bool? _lastEffectiveAutoStartState;
 
         public TrayAppContext()
         {
+            TrayIconFactory.Initialize();
+
             _settings = SettingsManager.Load();
             Logger.Init(SettingsManager.AppDataFolder);
-
             SaveIfAutoStartTransitionDue();
 
             _scheduler = new Scheduler(new TeamsLauncher(), () => _settings, SaveSettings, ShowBalloon);
-
             _autoStartToggleItem = CreateMenuItem(
                 "Auto-start ON",
                 SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now),
                 ToggleAutoStartMaster);
-
             _runAtStartupItem = CreateMenuItem(
                 "Run FileStarter on Windows startup",
                 IsRunAtStartupEnabled(),
                 ToggleRunAtStartup);
-
             _startVpnFirstItem = CreateMenuItem(
                 "Start VPN first",
                 _settings.StartVpnFirstEnabled,
@@ -69,8 +68,7 @@ namespace TeamsTrayStarter
 
             _trayMenu = BuildContextMenu();
             _menuHostForm = CreateMenuHostForm();
-
-            _trayMenu.Closed += (_, __) =>
+            _trayMenu.Closed += (_, _) =>
             {
                 if (_menuHostForm.Visible)
                     _menuHostForm.Hide();
@@ -86,14 +84,14 @@ namespace TeamsTrayStarter
             {
                 Interval = SystemInformation.DoubleClickTime
             };
-            _singleLeftClickTimer.Tick += (_, __) =>
+            _singleLeftClickTimer.Tick += (_, _) =>
             {
                 _singleLeftClickTimer.Stop();
                 ToggleAutoStartMaster();
             };
 
             _tooltipUpdateTimer = new System.Windows.Forms.Timer();
-            _tooltipUpdateTimer.Tick += (_, __) => UpdateTrayUi();
+            _tooltipUpdateTimer.Tick += (_, _) => UpdateTrayUi();
 
             _trayIcon.MouseClick += TrayIcon_MouseClick;
             _trayIcon.MouseDoubleClick += TrayIcon_MouseDoubleClick;
@@ -101,7 +99,6 @@ namespace TeamsTrayStarter
             TryApplyRunAtStartupSetting();
             UpdateTrayUi();
             _scheduler.StartOrReschedule();
-
             _ = ConnectVpnAtStartupAsync();
         }
 
@@ -111,13 +108,12 @@ namespace TeamsTrayStarter
             menu.Padding = new Padding(6);
             menu.BackColor = Color.White;
             menu.RenderMode = ToolStripRenderMode.System;
-
             menu.Items.Add(_autoStartToggleItem);
             menu.Items.Add(_runAtStartupItem);
             menu.Items.Add(_startVpnFirstItem);
-            menu.Items.Add(new ToolStripMenuItem("Settings", null, (_, __) => OpenSettings()));
-            menu.Items.Add(new ToolStripMenuItem("View log", null, (_, __) => OpenLogViewer()));
-            menu.Items.Add(new ToolStripMenuItem("Suggestions / bugs", null, (_, __) =>
+            menu.Items.Add(new ToolStripMenuItem("Settings", null, (_, _) => OpenSettings()));
+            menu.Items.Add(new ToolStripMenuItem("View log", null, (_, _) => OpenLogViewer()));
+            menu.Items.Add(new ToolStripMenuItem("Suggestions / bugs", null, (_, _) =>
             {
                 try
                 {
@@ -137,7 +133,7 @@ namespace TeamsTrayStarter
                         MessageBoxIcon.Error);
                 }
             }));
-            menu.Items.Add(new ToolStripMenuItem("Check for new version", null, (_, __) =>
+            menu.Items.Add(new ToolStripMenuItem("Check for new version", null, (_, _) =>
             {
                 try
                 {
@@ -157,11 +153,10 @@ namespace TeamsTrayStarter
                         MessageBoxIcon.Error);
                 }
             }));
-            menu.Items.Add(new ToolStripMenuItem("Help", null, (_, __) => OpenHelp()));
-            menu.Items.Add(new ToolStripMenuItem("About", null, (_, __) => OpenAbout()));
+            menu.Items.Add(new ToolStripMenuItem("Help", null, (_, _) => OpenHelp()));
+            menu.Items.Add(new ToolStripMenuItem("About", null, (_, _) => OpenAbout()));
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(new ToolStripMenuItem("Exit", null, (_, __) => ExitApplication()));
-
+            menu.Items.Add(new ToolStripMenuItem("Exit", null, (_, _) => ExitApplication()));
             return menu;
         }
 
@@ -186,7 +181,7 @@ namespace TeamsTrayStarter
                 Checked = isChecked,
                 CheckOnClick = false
             };
-            item.Click += (_, __) => onClick();
+            item.Click += (_, _) => onClick();
             return item;
         }
 
@@ -220,7 +215,6 @@ namespace TeamsTrayStarter
             var cursorPos = Cursor.Position;
             var menuSize = _trayMenu.GetPreferredSize(Size.Empty);
             var screen = Screen.FromPoint(cursorPos).WorkingArea;
-
             int x = cursorPos.X - (menuSize.Width / 2);
             int y = cursorPos.Y;
 
@@ -231,12 +225,10 @@ namespace TeamsTrayStarter
 
             x = Math.Max(screen.Left, Math.Min(x, screen.Right - menuSize.Width));
             y = Math.Max(screen.Top, Math.Min(y, screen.Bottom - menuSize.Height));
-
             var adjustedPos = new Point(x, y);
             _menuHostForm.Location = adjustedPos;
             _menuHostForm.Show();
             _menuHostForm.Activate();
-
             SetForegroundWindow(_menuHostForm.Handle);
             _trayMenu.Show(_menuHostForm, _menuHostForm.PointToClient(adjustedPos));
         }
@@ -247,7 +239,6 @@ namespace TeamsTrayStarter
             {
                 if (!_settings.StartVpnFirstEnabled)
                     return;
-
                 if (string.IsNullOrWhiteSpace(_settings.VpnConnectionName))
                     return;
 
@@ -283,7 +274,6 @@ namespace TeamsTrayStarter
         {
             SaveIfAutoStartTransitionDue();
             bool effectiveAutoStart = SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now);
-
             _autoStartToggleItem.Checked = effectiveAutoStart;
             _autoStartToggleItem.Text = effectiveAutoStart ? "Auto-start ON" : "Auto-start OFF";
             _runAtStartupItem.Checked = IsRunAtStartupEnabled();
@@ -299,7 +289,6 @@ namespace TeamsTrayStarter
 
             var next = SettingsManager.GetNextLaunchDateTime(_settings, DateTime.Now);
             bool pausedByDate = SettingsManager.IsAutoStartPausedByDate(_settings, DateTime.Now) && _settings.AutoStartOffUntilEnabled;
-
             if (pausedByDate && _settings.AutoStartOffUntilDate.HasValue)
             {
                 string untilStr = _settings.AutoStartOffUntilDate.Value.ToString("dd/MM HH:mm");
@@ -324,8 +313,8 @@ namespace TeamsTrayStarter
             var now = DateTime.Now;
             var next = SettingsManager.GetNextLaunchDateTime(_settings, now);
             bool pausedByDate = SettingsManager.IsAutoStartPausedByDate(_settings, now) && _settings.AutoStartOffUntilEnabled;
-
             DateTime? nextUpdateTime = null;
+
             if (pausedByDate && _settings.AutoStartOffUntilDate.HasValue)
             {
                 nextUpdateTime = _settings.AutoStartOffUntilDate.Value;
@@ -363,7 +352,6 @@ namespace TeamsTrayStarter
         {
             bool enable = !IsRunAtStartupEnabled();
             _settings.RunAppAtStartup = enable;
-
             try
             {
                 if (enable)
@@ -375,7 +363,6 @@ namespace TeamsTrayStarter
                 SettingsManager.Save(_settings);
                 UpdateTrayUi();
             }
-            
             catch (Exception ex)
             {
                 Logger.Error("Startup VPN connection crashed.", ex);
@@ -489,6 +476,7 @@ namespace TeamsTrayStarter
                 taskDeleteEx = ex;
                 Logger.Error("Failed to remove Task Scheduler startup entry for FileStarter.", ex);
             }
+
             try
             {
                 RemoveRegistryRunEntry();
@@ -498,6 +486,7 @@ namespace TeamsTrayStarter
                 registryDeleteEx = ex;
                 Logger.Error("Failed to remove registry startup entry for FileStarter.", ex);
             }
+
             if (taskDeleteEx != null && registryDeleteEx != null)
                 throw new AggregateException(taskDeleteEx, registryDeleteEx);
         }
@@ -530,7 +519,6 @@ namespace TeamsTrayStarter
             string workingDir = Path.GetDirectoryName(exePath) ?? string.Empty;
             string escapedWorkingDir = System.Security.SecurityElement.Escape(workingDir) ?? workingDir;
             string escapedUser = System.Security.SecurityElement.Escape(currentUser) ?? currentUser;
-
             string xml = $@"<?xml version=""1.0"" encoding=""UTF-16""?>
 <Task version=""1.2"" xmlns=""http://schemas.microsoft.com/windows/2004/02/mit/task"">
   <RegistrationInfo>
@@ -575,12 +563,10 @@ namespace TeamsTrayStarter
     </Exec>
   </Actions>
 </Task>";
-
             string tempXmlPath = Path.Combine(Path.GetTempPath(), $"{RunValueName}_startup_task.xml");
             try
             {
                 File.WriteAllText(tempXmlPath, xml, Encoding.Unicode);
-
                 if (StartupTaskExists())
                 {
                     var deleteResult = RunSchtasks($"/Delete /TN \"{RunValueName}\" /F");
@@ -610,6 +596,7 @@ namespace TeamsTrayStarter
         {
             if (!StartupTaskExists())
                 return;
+
             var result = RunSchtasks($"/Delete /TN \"{RunValueName}\" /F");
             if (result.ExitCode != 0)
                 throw new InvalidOperationException($"Failed to delete startup task. {result.CombinedOutput}");
@@ -643,6 +630,7 @@ namespace TeamsTrayStarter
                           ?? Registry.CurrentUser.CreateSubKey(RunKeyPath, writable: true);
             if (key == null)
                 throw new InvalidOperationException("Cannot open HKCU Run key.");
+
             key.SetValue(RunValueName, $"\"{exePath}\"", RegistryValueKind.String);
         }
 
@@ -658,8 +646,9 @@ namespace TeamsTrayStarter
             {
                 if (TryActivateExistingForm(_settingsForm))
                     return;
+
                 _settingsForm = new SettingsForm(_settings);
-                _settingsForm.FormClosed += (_, __) => ApplySettingsIfAccepted();
+                _settingsForm.FormClosed += (_, _) => ApplySettingsIfAccepted();
                 ShowOrActivateForm(_settingsForm);
             }
             catch (Exception ex)
@@ -675,6 +664,7 @@ namespace TeamsTrayStarter
             {
                 if (_settingsForm == null)
                     return;
+
                 if (_settingsForm.Accepted)
                 {
                     var before = SettingsManager.Clone(_settings);
@@ -731,8 +721,9 @@ namespace TeamsTrayStarter
             {
                 if (TryActivateExistingForm(_logViewerForm))
                     return;
+
                 _logViewerForm = new LogViewerForm();
-                _logViewerForm.FormClosed += (_, __) => _logViewerForm = null;
+                _logViewerForm.FormClosed += (_, _) => _logViewerForm = null;
                 ShowOrActivateForm(_logViewerForm);
             }
             catch (Exception ex)
@@ -748,8 +739,9 @@ namespace TeamsTrayStarter
             {
                 if (TryActivateExistingForm(_helpForm))
                     return;
+
                 _helpForm = new HelpForm();
-                _helpForm.FormClosed += (_, __) => _helpForm = null;
+                _helpForm.FormClosed += (_, _) => _helpForm = null;
                 ShowOrActivateForm(_helpForm);
             }
             catch (Exception ex)
@@ -765,8 +757,9 @@ namespace TeamsTrayStarter
             {
                 if (TryActivateExistingForm(_aboutForm))
                     return;
+
                 _aboutForm = new AboutForm();
-                _aboutForm.FormClosed += (_, __) => _aboutForm = null;
+                _aboutForm.FormClosed += (_, _) => _aboutForm = null;
                 ShowOrActivateForm(_aboutForm);
             }
             catch (Exception ex)
@@ -779,6 +772,7 @@ namespace TeamsTrayStarter
         {
             if (form == null || form.IsDisposed)
                 return false;
+
             ShowOrActivateForm(form);
             return true;
         }

@@ -13,6 +13,7 @@ namespace TeamsTrayStarter
         private readonly Action<string, string, ToolTipIcon> _notify;
         private readonly System.Windows.Forms.Timer _timer;
         private bool _launchInProgress;
+        private DateTime? _lastScheduledTime;
 
         public Scheduler(
             TeamsLauncher launcher,
@@ -47,8 +48,13 @@ namespace TeamsTrayStarter
             }
 
             var next = ComputeNextActionTime(DateTime.Now, settings);
+            
             if (next.HasValue)
             {
+                if (_lastScheduledTime == next.Value)
+                    return;
+
+                _lastScheduledTime = next.Value;
                 ScheduleTimer(next.Value - DateTime.Now);
             }
 

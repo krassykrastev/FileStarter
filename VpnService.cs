@@ -15,6 +15,34 @@ namespace TeamsTrayStarter
         private static readonly TimeSpan VpnStatusPollInterval = TimeSpan.FromSeconds(5);
         private const int SilentStartupRetryAttempts = 5;
 
+        
+        private static readonly Dictionary<string, string?> _vpnTypeCache = new(StringComparer.OrdinalIgnoreCase);
+
+        private static (int ExitCode, string StdOut, string StdErr) RunProcess(string fileName,string arguments,bool utf8 = false)
+        {
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = fileName,
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    StandardOutputEncoding = utf8 ? Encoding.UTF8 : null,
+                    StandardErrorEncoding = utf8 ? Encoding.UTF8 : null
+                }
+            };
+
+            process.Start();
+            string stdOut = process.StandardOutput.ReadToEnd();
+            string stdErr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+
+            return (process.ExitCode, stdOut, stdErr);
+        }
+
         public static List<string> GetAvailableVpnConnectionNames()
         {
             var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -165,36 +193,22 @@ namespace TeamsTrayStarter
                     args = $"\"{vpnName}\"";
                 }
 
-                using var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "rasdial.exe",
-                        Arguments = args,
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true
-                    }
-                };
+                var result = RunProcess("rasdial.exe", args);
 
-                process.Start();
-                string stdOut = process.StandardOutput.ReadToEnd();
-                string stdErr = process.StandardError.ReadToEnd();
-                process.WaitForExit();
-
-                if (process.ExitCode != 0)
+                if (result.ExitCode != 0)
                 {
-                    string details = (stdOut + " " + stdErr).Replace(Environment.NewLine, " ").Trim();
-                    Logger.Warn($"TryStartVpnConnection: rasdial returned {process.ExitCode} for '{vpnName}' => {details}");
+                    string details = (result.StdOut + " " + result.StdErr)
+                        .Replace(Environment.NewLine, " ")
+                        .Trim();
+
+                    Logger.Warn($"TryStartVpnConnection: rasdial returned {result.ExitCode} => {details}");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Warn($"TryStartVpnConnection: failed for '{vpnName}' => {ex.Message}");
+                Logger.Warn($"TryStartVpnConnection failed: {ex.Message}");
             }
         }
-
         private static bool IsVpnConnected(string vpnName)
         {
             try
@@ -230,33 +244,26 @@ namespace TeamsTrayStarter
 
         private static string? GetVpnType(string vpnName)
         {
+            if (_vpnTypeCache.TryGetValue(vpnName, out var cached))
+                return cached;
+
             try
             {
-                using var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "powershell.exe",
-                        Arguments = "-NoProfile -ExecutionPolicy Bypass -Command " +
-                                    QuoteArgument($"(Get-VpnConnection -Name '{EscapePowerShellSingleQuotedString(vpnName)}' -ErrorAction SilentlyContinue).TunnelType"),
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true,
-                        StandardOutputEncoding = Encoding.UTF8,
-                        StandardErrorEncoding = Encoding.UTF8
-                    }
-                };
+                var result = RunProcess(
+                    "powershell.exe",
+                    "-NoProfile -ExecutionPolicy Bypass -Command " +
+                    QuoteArgument($"(Get-VpnConnection -Name '{EscapePowerShellSingleQuotedString(vpnName)}' -ErrorAction SilentlyContinue).TunnelType"),
+                    utf8: true);
 
-                process.Start();
-                string stdOut = process.StandardOutput.ReadToEnd().Trim();
-                process.WaitForExit();
+                string value = result.StdOut.Trim();
+                var final = string.IsNullOrWhiteSpace(value) ? null : value;
 
-                return string.IsNullOrWhiteSpace(stdOut) ? null : stdOut;
+                _vpnTypeCache[vpnName] = final;
+                return final;
             }
             catch (Exception ex)
             {
-                Logger.Warn($"GetVpnType: failed to query VPN type for '{vpnName}' => {ex.Message}");
+                Logger.Warn($"GetVpnType failed: {ex.Message}");
                 return null;
             }
         }

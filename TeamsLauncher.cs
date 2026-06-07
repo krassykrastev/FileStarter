@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Collections.Concurrent;
 
 namespace TeamsTrayStarter
 {
@@ -16,6 +17,11 @@ namespace TeamsTrayStarter
         private const int InterAppLaunchDelayMs = 10000;
 
         private readonly VpnService _vpnService = new();
+        
+        private static readonly ConcurrentDictionary<string, (bool Result, DateTime Time)> _runCache =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(1);
 
         private readonly struct LaunchAttemptResult
         {
@@ -347,38 +353,21 @@ namespace TeamsTrayStarter
         {
             try
             {
-                string wantedName = Path.GetFileNameWithoutExtension(fullPath).ToLowerInvariant();
-                string wantedPath = NormalizePath(fullPath);
-                int currentPid = Process.GetCurrentProcess().Id;
-
-                foreach (var process in Process.GetProcesses())
+                if (_runCache.TryGetValue(fullPath, out var cached))
                 {
-                    try
-                    {
-                        if (process.Id == currentPid)
-                            continue;
-
-                        var processName = (process.ProcessName ?? string.Empty).Trim().ToLowerInvariant();
-                        if (processName != wantedName)
-                            continue;
-
-                        string? processPath = TryGetProcessPath(process);
-                        if (!string.IsNullOrWhiteSpace(processPath) &&
-                            string.Equals(NormalizePath(processPath), wantedPath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            return true;
-                        }
-                    }
-                    catch
-                    {
-                    }
+                    if (DateTime.Now - cached.Time < CacheTtl)
+                        return cached.Result;
                 }
 
-                return false;
+                string wantedName = Path.GetFileNameWithoutExtension(fullPath).ToLowerInvariant();
+                bool result = Process.GetProcessesByName(wantedName).Length > 0;
+
+                _runCache[fullPath] = (result, DateTime.Now);
+                return result;
             }
             catch (Exception ex)
             {
-                Logger.Error("IsExecutableRunning: failed; assuming not running.", ex);
+                Logger.Error("IsExecutableRunning failed.", ex);
                 return false;
             }
         }

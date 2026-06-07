@@ -41,6 +41,7 @@ namespace TeamsTrayStarter
 
         [DllImport("user32.dll")]
         private static extern bool PostMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+        private bool? _lastEffectiveAutoStartState;
 
         public TrayAppContext()
         {
@@ -288,9 +289,13 @@ namespace TeamsTrayStarter
             _runAtStartupItem.Checked = IsRunAtStartupEnabled();
             _startVpnFirstItem.Checked = _settings.StartVpnFirstEnabled;
 
-            _currentIcon?.Dispose();
-            _currentIcon = TrayIconFactory.CreateAutoStartStateIcon(effectiveAutoStart, TrayIconSize);
-            _trayIcon.Icon = _currentIcon;
+            if (_lastEffectiveAutoStartState != effectiveAutoStart)
+            {
+                _currentIcon?.Dispose();
+                _currentIcon = TrayIconFactory.CreateAutoStartStateIcon(effectiveAutoStart, TrayIconSize);
+                _trayIcon.Icon = _currentIcon;
+                _lastEffectiveAutoStartState = effectiveAutoStart;
+            }
 
             var next = SettingsManager.GetNextLaunchDateTime(_settings, DateTime.Now);
             bool pausedByDate = SettingsManager.IsAutoStartPausedByDate(_settings, DateTime.Now) && _settings.AutoStartOffUntilEnabled;
@@ -370,10 +375,10 @@ namespace TeamsTrayStarter
                 SettingsManager.Save(_settings);
                 UpdateTrayUi();
             }
+            
             catch (Exception ex)
             {
-                Logger.Error("Failed to toggle Run-at-startup.", ex);
-                ShowBalloon("FileStarter", "Failed to change startup setting. See log.", ToolTipIcon.Error);
+                Logger.Error("Startup VPN connection crashed.", ex);
             }
         }
 

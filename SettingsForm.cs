@@ -7,6 +7,9 @@ namespace TeamsTrayStarter
 {
     public sealed class SettingsForm : Form
     {
+        private static readonly Color EnabledTextColor = Color.Black;
+        private static readonly Color DisabledTextColor = SystemColors.GrayText;
+
         private readonly Label _daysHeaderLabel;
         private readonly Label _vacationModeLabel;
         private readonly CheckBox _autoStartOffFromCheckBox;
@@ -130,9 +133,10 @@ namespace TeamsTrayStarter
             foreach (var row in _fileRows)
             {
                 row.CheckBox.CheckedChanged += FileCheckBox_CheckedChanged;
-                row.CheckBox.CheckedChanged += (_, __) => row.TextBox.Enabled = row.CheckBox.Checked;
+                row.CheckBox.CheckedChanged += (_, __) => UpdateFileRowEnabledState(row);
                 row.BrowseButton.Click += (_, __) => BrowseForFile(row);
                 row.ActionButton.Click += (_, __) => ApplyRowAction(row);
+                UpdateFileRowEnabledState(row);
             }
             UpdateFileActionButtonStates();
 
@@ -151,7 +155,8 @@ namespace TeamsTrayStarter
                 Text = "Turn auto-start OFF from this date",
                 AutoSize = true,
                 Location = new Point(rightColumnX, futureOffFromY + 4),
-                Checked = current.AutoStartOffFromEnabled
+                Checked = current.AutoStartOffFromEnabled,
+                ForeColor = current.AutoStartOffFromEnabled ? EnabledTextColor : DisabledTextColor
             };
             Controls.Add(_autoStartOffFromCheckBox);
 
@@ -175,7 +180,8 @@ namespace TeamsTrayStarter
                 Text = "Turn auto-start OFF until this date",
                 AutoSize = true,
                 Location = new Point(rightColumnX, futureOffUntilY + 4),
-                Checked = current.AutoStartOffUntilEnabled
+                Checked = current.AutoStartOffUntilEnabled,
+                ForeColor = current.AutoStartOffUntilEnabled ? EnabledTextColor : DisabledTextColor
             };
             Controls.Add(_autoStartOffUntilCheckBox);
 
@@ -193,6 +199,7 @@ namespace TeamsTrayStarter
                 Enabled = current.AutoStartOffFromEnabled && current.AutoStartOffUntilEnabled
             };
             Controls.Add(_autoStartOffUntilDatePicker);
+
             WireFutureOffControls();
 
             int buttonY = ClientSize.Height - buttonHeight - bottomMargin;
@@ -239,7 +246,8 @@ namespace TeamsTrayStarter
             {
                 Text = dayAbbrev,
                 AutoSize = true,
-                Location = new Point(dayX, y + 6)
+                Location = new Point(dayX, y + 6),
+                ForeColor = currentDaySetting.Enabled ? EnabledTextColor : DisabledTextColor
             };
             var timePicker = new DateTimePicker
             {
@@ -254,12 +262,15 @@ namespace TeamsTrayStarter
             timePicker.Value = TimeSpan.TryParse(currentDaySetting.Time, out var time)
                 ? DateTime.Today.Add(time)
                 : DateTime.Today.AddHours(9);
-            checkBox.CheckedChanged += (_, __) => timePicker.Enabled = checkBox.Checked;
-
+            checkBox.CheckedChanged += (_, __) =>
+            {
+                timePicker.Enabled = checkBox.Checked;
+                dayLabel.ForeColor = checkBox.Checked ? EnabledTextColor : DisabledTextColor;
+            };
             Controls.Add(checkBox);
             Controls.Add(dayLabel);
             Controls.Add(timePicker);
-            return new DayRow(dayAbbrev, checkBox, timePicker);
+            return new DayRow(dayAbbrev, checkBox, dayLabel, timePicker);
         }
 
         private FileRow CreateFileRow(int slotIndex, string? path, bool isChecked, int y, int checkX, int textX, int textWidth, int browseX, int browseWidth, int actionX, int actionWidth, string actionText)
@@ -288,7 +299,8 @@ namespace TeamsTrayStarter
                 Width = browseWidth,
                 Height = 32,
                 Location = new Point(browseX, y),
-                FlatStyle = FlatStyle.System
+                FlatStyle = FlatStyle.System,
+                Enabled = isChecked
             };
             var actionButton = new Button
             {
@@ -296,14 +308,13 @@ namespace TeamsTrayStarter
                 Width = actionWidth,
                 Height = 32,
                 Location = new Point(actionX, y),
-                FlatStyle = FlatStyle.System
+                FlatStyle = FlatStyle.System,
+                Enabled = isChecked && !string.IsNullOrWhiteSpace(path)
             };
-
             Controls.Add(checkBox);
             Controls.Add(textBox);
             Controls.Add(browseButton);
             Controls.Add(actionButton);
-
             return new FileRow(slotIndex, checkBox, textBox, browseButton, actionButton, actionText, path);
         }
 
@@ -312,7 +323,10 @@ namespace TeamsTrayStarter
             _autoStartOffCheckBox_CheckedChanged(null, EventArgs.Empty);
             _autoStartOffFromCheckBox.CheckedChanged += _autoStartOffCheckBox_CheckedChanged;
             _autoStartOffUntilCheckBox.CheckedChanged += (_, __) =>
+            {
+                _autoStartOffUntilCheckBox.ForeColor = _autoStartOffUntilCheckBox.Checked ? EnabledTextColor : DisabledTextColor;
                 _autoStartOffUntilDatePicker.Enabled = _autoStartOffFromCheckBox.Checked && _autoStartOffUntilCheckBox.Checked;
+            };
             _autoStartOffFromDatePicker.ValueChanged += (_, __) =>
             {
                 _autoStartOffUntilDatePicker.MinDate = _autoStartOffFromDatePicker.Value.Date;
@@ -326,13 +340,23 @@ namespace TeamsTrayStarter
         private void _autoStartOffCheckBox_CheckedChanged(object? sender, EventArgs e)
         {
             bool fromChecked = _autoStartOffFromCheckBox.Checked;
+            _autoStartOffFromCheckBox.ForeColor = fromChecked ? EnabledTextColor : DisabledTextColor;
             _autoStartOffFromDatePicker.Enabled = fromChecked;
             if (!fromChecked)
             {
                 _autoStartOffUntilCheckBox.Checked = false;
             }
             _autoStartOffUntilCheckBox.Enabled = fromChecked;
+            _autoStartOffUntilCheckBox.ForeColor = _autoStartOffUntilCheckBox.Checked ? EnabledTextColor : DisabledTextColor;
             _autoStartOffUntilDatePicker.Enabled = fromChecked && _autoStartOffUntilCheckBox.Checked;
+        }
+
+        private void UpdateFileRowEnabledState(FileRow row)
+        {
+            bool isEnabled = row.CheckBox.Checked;
+            row.TextBox.Enabled = isEnabled;
+            row.BrowseButton.Enabled = isEnabled;
+            row.ActionButton.Enabled = isEnabled && !string.IsNullOrWhiteSpace(row.Path);
         }
 
         private void BrowseForFile(FileRow row)
@@ -346,9 +370,9 @@ namespace TeamsTrayStarter
             };
             if (dialog.ShowDialog() != DialogResult.OK)
                 return;
-
             row.Path = dialog.FileName;
             row.TextBox.Text = SettingsManager.GetFileLineText(row.SlotIndex, row.Path);
+            UpdateFileRowEnabledState(row);
             UpdateFileActionButtonStates();
         }
 
@@ -360,6 +384,7 @@ namespace TeamsTrayStarter
             {
                 row.CheckBox.Checked = false;
             }
+            UpdateFileRowEnabledState(row);
             UpdateFileActionButtonStates();
         }
 
@@ -367,7 +392,7 @@ namespace TeamsTrayStarter
         {
             foreach (var row in _fileRows)
             {
-                row.ActionButton.Enabled = !string.IsNullOrWhiteSpace(row.Path);
+                row.ActionButton.Enabled = row.CheckBox.Checked && !string.IsNullOrWhiteSpace(row.Path);
             }
         }
 
@@ -375,14 +400,12 @@ namespace TeamsTrayStarter
         {
             if (sender is not CheckBox changedCheckBox)
                 return;
-
             int checkedCount = 0;
             foreach (var row in _fileRows)
             {
                 if (row.CheckBox.Checked)
                     checkedCount++;
             }
-
             if (checkedCount == 0)
             {
                 changedCheckBox.Checked = true;
@@ -393,7 +416,6 @@ namespace TeamsTrayStarter
         {
             if (string.IsNullOrWhiteSpace(row.Path) || File.Exists(row.Path))
                 return true;
-
             string slotLabel = SettingsManager.GetSlotLabel(row.SlotIndex);
             MessageBox.Show(
                 this,
@@ -420,13 +442,11 @@ namespace TeamsTrayStarter
                     return;
                 }
             }
-
             foreach (var row in _fileRows)
             {
                 if (!ValidateCustomPathExists(row))
                     return;
             }
-
             if (_autoStartOffFromCheckBox.Checked)
             {
                 if (_autoStartOffFromDatePicker.Value.Date < DateTime.Today)
@@ -440,7 +460,6 @@ namespace TeamsTrayStarter
                     return;
                 }
             }
-
             MonEnabled = _dayRows[0].CheckBox.Checked;
             TueEnabled = _dayRows[1].CheckBox.Checked;
             WedEnabled = _dayRows[2].CheckBox.Checked;
@@ -455,14 +474,12 @@ namespace TeamsTrayStarter
             FriTimeHHmm = _dayRows[4].TimePicker.Value.ToString("HH:mm");
             SatTimeHHmm = _dayRows[5].TimePicker.Value.ToString("HH:mm");
             SunTimeHHmm = _dayRows[6].TimePicker.Value.ToString("HH:mm");
-
             AutoStartOffFromEnabled = _autoStartOffFromCheckBox.Checked;
             AutoStartOffFromDate = _autoStartOffFromCheckBox.Checked ? _autoStartOffFromDatePicker.Value.Date : null;
             AutoStartOffUntilEnabled = _autoStartOffUntilCheckBox.Checked;
             AutoStartOffUntilDate = (_autoStartOffFromCheckBox.Checked && _autoStartOffUntilCheckBox.Checked)
                 ? _autoStartOffUntilDatePicker.Value.Date
                 : null;
-
             File1Enabled = _fileRows[0].CheckBox.Checked;
             File2Enabled = _fileRows[1].CheckBox.Checked;
             File3Enabled = _fileRows[2].CheckBox.Checked;
@@ -471,22 +488,23 @@ namespace TeamsTrayStarter
             File2Path = _fileRows[1].Path;
             File3Path = _fileRows[2].Path;
             File4Path = _fileRows[3].Path;
-
             Accepted = true;
             Close();
         }
 
         private sealed class DayRow
         {
-            public DayRow(string name, CheckBox checkBox, DateTimePicker timePicker)
+            public DayRow(string name, CheckBox checkBox, Label dayLabel, DateTimePicker timePicker)
             {
                 Name = name;
                 CheckBox = checkBox;
+                DayLabel = dayLabel;
                 TimePicker = timePicker;
             }
 
             public string Name { get; }
             public CheckBox CheckBox { get; }
+            public Label DayLabel { get; }
             public DateTimePicker TimePicker { get; }
         }
 

@@ -38,8 +38,8 @@ namespace TeamsTrayStarter
 
             var settings = _getSettings();
             ApplyPendingAutoStartTransition(settings);
-
             var now = DateTime.Now;
+
             if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, now))
             {
                 ScheduleVacationRecheckIfNeeded(settings, now);
@@ -71,8 +71,8 @@ namespace TeamsTrayStarter
         {
             var settings = _getSettings();
             ApplyPendingAutoStartTransition(settings);
-
             var now = DateTime.Now;
+
             if (_launchInProgress ||
                 !SettingsManager.IsEffectiveAutoStartEnabled(settings, now) ||
                 !SettingsManager.ShouldLaunchNow(settings, now))
@@ -92,7 +92,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Error("LaunchAndPersistAsync: launch failed.", ex);
+                Logger.Other("LaunchAndPersistAsync: launch failed.", ex);
                 _notify("FileStarter", "Launch failed. See log for details.", ToolTipIcon.Error);
             }
             finally

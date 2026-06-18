@@ -8,10 +8,14 @@ namespace TeamsTrayStarter
 {
     public static class Logger
     {
+        private const string ChangeLevel = "CHANGE";
+        private const string OtherLevel = "OTHER";
+
         private static readonly object Sync = new();
         private static readonly Regex EntryStartRegex = new(
             @"^(?<ts>\d{4}-\d{2}-\d{2} \d{2}:\d{2}) \[(?<level>CHANGE|OTHER)\] (?<msg>.*)$",
             RegexOptions.Compiled);
+
         private const long MaxLogSizeBytes = 1_048_576;
 
         public static string LogFilePath { get; private set; } = string.Empty;
@@ -22,10 +26,9 @@ namespace TeamsTrayStarter
             LogFilePath = Path.Combine(appDataFolder, "app.log");
         }
 
-        public static void Change(string message) => Write("CHANGE", message);
-        public static void Other(string message) => Write("OTHER", message);
-        public static void Warn(string message) => Write("OTHER", message);
-        public static void Error(string message, Exception ex) => Write("OTHER", message + Environment.NewLine + ex);
+        public static void Change(string message) => Write(ChangeLevel, message);
+        public static void Other(string message) => Write(OtherLevel, message);
+        public static void Other(string message, Exception ex) => Write(OtherLevel, message + Environment.NewLine + ex);
 
         public static void Clear()
         {
@@ -35,6 +38,7 @@ namespace TeamsTrayStarter
                 {
                     if (string.IsNullOrWhiteSpace(LogFilePath))
                         return;
+
                     Directory.CreateDirectory(Path.GetDirectoryName(LogFilePath)!);
                     File.WriteAllText(LogFilePath, string.Empty, Encoding.UTF8);
                 }
@@ -62,7 +66,7 @@ namespace TeamsTrayStarter
                     new ParsedLogEntry
                     {
                         Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
-                        Level = "OTHER",
+                        Level = OtherLevel,
                         Message = "Failed to read log entries." + Environment.NewLine + ex.Message
                     }
                 };
@@ -134,7 +138,7 @@ namespace TeamsTrayStarter
         public sealed class ParsedLogEntry
         {
             public string Timestamp { get; set; } = string.Empty;
-            public string Level { get; set; } = "OTHER";
+            public string Level { get; set; } = OtherLevel;
             public string Message { get; set; } = string.Empty;
         }
     }

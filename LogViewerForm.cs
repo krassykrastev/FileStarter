@@ -10,6 +10,27 @@ namespace TeamsTrayStarter
 {
     public sealed class LogViewerForm : Form
     {
+        private const int TopPanelHeight = 62;
+        private const int PanelPadding = 10;
+        private const int LabelWidth = 62;
+        private const int ToggleHeight = 36;
+        private const int ActionButtonWidth = 124;
+        private const int ActionButtonHeight = 36;
+        private const int ActionButtonMarginRight = 8;
+        private const int FilterButtonMarginRight = 6;
+        private const int RefreshIntervalMs = 300;
+        private const int InitialLoadIntervalMs = 1;
+
+        private static readonly Color ActionTextColor = Color.FromArgb(45, 45, 45);
+        private static readonly Color LabelTextColor = Color.FromArgb(70, 70, 70);
+        private static readonly Color ToggleCheckedBackColor = Color.FromArgb(232, 239, 255);
+        private static readonly Color ToggleCheckedForeColor = Color.FromArgb(41, 70, 135);
+        private static readonly Color ToggleCheckedBorderColor = Color.FromArgb(181, 198, 236);
+        private static readonly Color ToggleUncheckedForeColor = Color.FromArgb(80, 80, 80);
+        private static readonly Color BorderColor = Color.FromArgb(214, 219, 226);
+        private static readonly Color MouseDownBackColor = Color.FromArgb(235, 238, 242);
+        private static readonly Color MouseOverBackColor = Color.FromArgb(245, 247, 250);
+
         private readonly Panel _topPanel;
         private readonly Panel _contentPanel;
         private readonly FlowLayoutPanel _actionsPanel;
@@ -49,9 +70,9 @@ namespace TeamsTrayStarter
             _topPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 62,
+                Height = TopPanelHeight,
                 BackColor = Color.White,
-                Padding = new Padding(10)
+                Padding = new Padding(PanelPadding)
             };
             _contentPanel = new Panel
             {
@@ -80,18 +101,20 @@ namespace TeamsTrayStarter
 
             _clearLogButton = CreateActionButton("Clear log", (_, _) => ClearLog());
             _exportLogButton = CreateActionButton("Export log", (_, _) => ExportLog());
+
             _showLabel = new Label
             {
                 AutoSize = false,
-                Width = 62,
-                Height = 36,
+                Width = LabelWidth,
+                Height = ToggleHeight,
                 Text = "Show:",
                 TextAlign = ContentAlignment.MiddleLeft,
-                ForeColor = Color.FromArgb(70, 70, 70),
+                ForeColor = LabelTextColor,
                 Font = new Font("Segoe UI", 9F, FontStyle.Regular),
                 Margin = new Padding(0, 0, 4, 0),
                 UseCompatibleTextRendering = false
             };
+
             _otherFilterButton = CreateFilterToggle("Other", 126);
             _changeFilterButton = CreateFilterToggle("Changes", 132);
 
@@ -122,7 +145,7 @@ namespace TeamsTrayStarter
             Controls.Add(_contentPanel);
             Controls.Add(_topPanel);
 
-            _refreshTimer = new System.Windows.Forms.Timer { Interval = 300 };
+            _refreshTimer = new System.Windows.Forms.Timer { Interval = RefreshIntervalMs };
             _refreshTimer.Tick += (_, _) =>
             {
                 _refreshTimer.Stop();
@@ -133,7 +156,7 @@ namespace TeamsTrayStarter
                 }
             };
 
-            _initialLoadTimer = new System.Windows.Forms.Timer { Interval = 1 };
+            _initialLoadTimer = new System.Windows.Forms.Timer { Interval = InitialLoadIntervalMs };
             _initialLoadTimer.Tick += (_, _) =>
             {
                 _initialLoadTimer.Stop();
@@ -145,8 +168,8 @@ namespace TeamsTrayStarter
             string fileName = Path.GetFileName(Logger.LogFilePath);
             if (string.IsNullOrWhiteSpace(fileName))
                 fileName = "app.log";
-            Directory.CreateDirectory(directory);
 
+            Directory.CreateDirectory(directory);
             _fileWatcher = new FileSystemWatcher(directory, fileName)
             {
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
@@ -170,22 +193,22 @@ namespace TeamsTrayStarter
             {
                 Text = text,
                 AutoSize = false,
-                Width = 124,
-                Height = 36,
+                Width = ActionButtonWidth,
+                Height = ActionButtonHeight,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.White,
-                ForeColor = Color.FromArgb(45, 45, 45),
+                ForeColor = ActionTextColor,
                 Font = new Font("Segoe UI", 9F, FontStyle.Regular),
-                Margin = new Padding(0, 0, 8, 0),
+                Margin = new Padding(0, 0, ActionButtonMarginRight, 0),
                 Cursor = Cursors.Hand,
                 TabStop = false,
                 TextAlign = ContentAlignment.MiddleCenter,
                 UseCompatibleTextRendering = true
             };
-            button.FlatAppearance.BorderColor = Color.FromArgb(214, 219, 226);
+            button.FlatAppearance.BorderColor = BorderColor;
             button.FlatAppearance.BorderSize = 1;
-            button.FlatAppearance.MouseDownBackColor = Color.FromArgb(235, 238, 242);
-            button.FlatAppearance.MouseOverBackColor = Color.FromArgb(245, 247, 250);
+            button.FlatAppearance.MouseDownBackColor = MouseDownBackColor;
+            button.FlatAppearance.MouseOverBackColor = MouseOverBackColor;
             button.Click += onClick;
             return button;
         }
@@ -197,12 +220,12 @@ namespace TeamsTrayStarter
                 Appearance = Appearance.Button,
                 AutoSize = false,
                 Width = width,
-                Height = 36,
+                Height = ToggleHeight,
                 Text = string.Empty,
                 FlatStyle = FlatStyle.Flat,
                 Checked = true,
                 Font = new Font("Segoe UI", 9F, FontStyle.Regular),
-                Margin = new Padding(0, 0, 6, 0),
+                Margin = new Padding(0, 0, FilterButtonMarginRight, 0),
                 Cursor = Cursors.Hand,
                 TabStop = false,
                 UseCompatibleTextRendering = true,
@@ -224,12 +247,14 @@ namespace TeamsTrayStarter
         {
             if (sender is not CheckBox check)
                 return;
+
             string text = check.Tag?.ToString() ?? string.Empty;
             const int reservedLeftWidth = 28;
             const int reservedRightWidth = 28;
             const int checkGlyphWidth = 12;
             var checkRect = new Rectangle(reservedLeftWidth - checkGlyphWidth, 0, checkGlyphWidth, check.ClientSize.Height);
             var textRect = new Rectangle(reservedLeftWidth, 0, check.ClientSize.Width - reservedLeftWidth - reservedRightWidth, check.ClientSize.Height);
+
             if (check.Checked)
             {
                 TextRenderer.DrawText(
@@ -240,6 +265,7 @@ namespace TeamsTrayStarter
                     check.ForeColor,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
             }
+
             TextRenderer.DrawText(
                 e.Graphics,
                 text,
@@ -253,22 +279,22 @@ namespace TeamsTrayStarter
         {
             if (check.Checked)
             {
-                check.BackColor = Color.FromArgb(232, 239, 255);
-                check.ForeColor = Color.FromArgb(41, 70, 135);
-                check.FlatAppearance.BorderColor = Color.FromArgb(181, 198, 236);
+                check.BackColor = ToggleCheckedBackColor;
+                check.ForeColor = ToggleCheckedForeColor;
+                check.FlatAppearance.BorderColor = ToggleCheckedBorderColor;
             }
             else
             {
                 check.BackColor = Color.White;
-                check.ForeColor = Color.FromArgb(80, 80, 80);
-                check.FlatAppearance.BorderColor = Color.FromArgb(214, 219, 226);
+                check.ForeColor = ToggleUncheckedForeColor;
+                check.FlatAppearance.BorderColor = BorderColor;
             }
         }
 
         private void LayoutTopPanels()
         {
-            _actionsPanel.Location = new Point(10, 10);
-            _filtersPanel.Location = new Point(Math.Max(10, ClientSize.Width - _filtersPanel.PreferredSize.Width - 16), 10);
+            _actionsPanel.Location = new Point(PanelPadding, PanelPadding);
+            _filtersPanel.Location = new Point(Math.Max(PanelPadding, ClientSize.Width - _filtersPanel.PreferredSize.Width - 16), PanelPadding);
             _showLabel.Top = Math.Max(0, (_otherFilterButton.Height - _showLabel.Height) / 2);
         }
 
@@ -276,6 +302,7 @@ namespace TeamsTrayStarter
         {
             if (IsDisposed)
                 return;
+
             try
             {
                 BeginInvoke(new Action(() =>
@@ -318,12 +345,14 @@ namespace TeamsTrayStarter
             SendMessage(_logRichTextBox.Handle, WmSetRedraw, IntPtr.Zero, IntPtr.Zero);
             _logRichTextBox.SuspendLayout();
             _logRichTextBox.Clear();
+
             for (int i = entries.Count - 1; i >= 0; i--)
             {
                 var entry = entries[i];
                 var kind = GetKind(entry.Level);
                 if (!ShouldShow(kind))
                     continue;
+
                 Color kindColor = GetColor(kind);
                 _logRichTextBox.SelectionColor = kindColor;
                 _logRichTextBox.AppendText(GetEmoji(kind) + " ");
@@ -332,10 +361,13 @@ namespace TeamsTrayStarter
                 AppendMessageWithHighlights(entry.Message, kindColor);
                 _logRichTextBox.AppendText(Environment.NewLine);
             }
+
             _logRichTextBox.SelectionStart = preserveView ? Math.Min(selectionStart, _logRichTextBox.TextLength) : 0;
             _logRichTextBox.SelectionLength = 0;
+
             if (preserveView)
                 RestoreFirstVisibleLine(firstVisibleLine);
+
             _logRichTextBox.ResumeLayout();
             SendMessage(_logRichTextBox.Handle, WmSetRedraw, new IntPtr(1), IntPtr.Zero);
             _logRichTextBox.Invalidate();
@@ -346,6 +378,7 @@ namespace TeamsTrayStarter
         {
             if (string.IsNullOrEmpty(message))
                 return;
+
             int index = 0;
             while (index < message.Length)
             {
@@ -357,15 +390,18 @@ namespace TeamsTrayStarter
                     _logRichTextBox.AppendText(message[index..]);
                     break;
                 }
+
                 bool useOn = nextOn >= 0 && (nextOff < 0 || nextOn < nextOff);
                 int tokenIndex = useOn ? nextOn : nextOff;
                 string token = useOn ? "ON" : "OFF";
                 Color tokenColor = useOn ? Color.FromArgb(22, 101, 52) : Color.Crimson;
+
                 if (tokenIndex > index)
                 {
                     _logRichTextBox.SelectionColor = defaultColor;
                     _logRichTextBox.AppendText(message.Substring(index, tokenIndex - index));
                 }
+
                 _logRichTextBox.SelectionColor = tokenColor;
                 _logRichTextBox.AppendText(token);
                 index = tokenIndex + token.Length;
@@ -420,6 +456,7 @@ namespace TeamsTrayStarter
             };
             if (dialog.ShowDialog(this) != DialogResult.OK)
                 return;
+
             var sb = new StringBuilder();
             var entries = Logger.ReadEntries();
             for (int i = entries.Count - 1; i >= 0; i--)
@@ -428,6 +465,7 @@ namespace TeamsTrayStarter
                 var kind = GetKind(entry.Level);
                 if (!ShouldShow(kind))
                     continue;
+
                 sb.Append(GetEmoji(kind)).Append(' ')
                   .Append(entry.Timestamp).Append("  ")
                   .AppendLine(entry.Message);

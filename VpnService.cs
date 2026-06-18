@@ -33,6 +33,7 @@ namespace TeamsTrayStarter
                     StandardErrorEncoding = utf8 ? Encoding.UTF8 : null
                 }
             };
+
             process.Start();
             string stdOut = process.StandardOutput.ReadToEnd();
             string stdErr = process.StandardError.ReadToEnd();
@@ -45,11 +46,13 @@ namespace TeamsTrayStarter
             var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             AddVpnNamesFromPowerShell(result, allUserConnection: false);
             AddVpnNamesFromPowerShell(result, allUserConnection: true);
+
             if (result.Count == 0)
             {
                 AddVpnNamesFromPhoneBook(result, GetUserPhoneBookPath());
                 AddVpnNamesFromPhoneBook(result, GetAllUsersPhoneBookPath());
             }
+
             return result.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
         }
 
@@ -64,7 +67,7 @@ namespace TeamsTrayStarter
                 string vpnName = settings.VpnConnectionName?.Trim() ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(vpnName))
                 {
-                    Logger.Warn("VPN start requested but no VPN connection is selected.");
+                    Logger.Other("VPN start requested but no VPN connection is selected.");
                     notify("FileStarter", "Start VPN first is enabled, but no VPN connection is selected.", ToolTipIcon.Warning);
                     return false;
                 }
@@ -91,7 +94,7 @@ namespace TeamsTrayStarter
                         }
                     }
 
-                    Logger.Error(
+                    Logger.Other(
                         $"VPN connection failed after {SilentStartupRetryAttempts} silent startup attempts for '{vpnName}'.",
                         new InvalidOperationException("Silent startup VPN retry limit reached."));
                     notify("FileStarter", "VPN failed to connect after 5 silent retries.", ToolTipIcon.Warning);
@@ -120,10 +123,12 @@ namespace TeamsTrayStarter
                     {
                         settings.StartVpnFirstEnabled = false;
                         settings.VpnConnectionName = null;
+
                         if (saveSettings != null)
                             saveSettings(settings);
                         else
                             SettingsManager.Save(settings);
+
                         Logger.Change("Start VPN first turned OFF");
                         notify("FileStarter", "Start VPN first was disabled because the VPN connection could not be established.", ToolTipIcon.Warning);
                         return false;
@@ -132,7 +137,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Error("VPN connection failed.", ex);
+                Logger.Other("VPN connection failed.", ex);
                 notify("FileStarter", "VPN failed to connect.", ToolTipIcon.Warning);
                 return false;
             }
@@ -141,6 +146,7 @@ namespace TeamsTrayStarter
         private static async Task<bool> WaitForVpnConnectionAsync(string vpnName, TimeSpan timeout)
         {
             DateTime deadline = DateTime.Now.Add(timeout);
+
             while (DateTime.Now < deadline)
             {
                 if (IsVpnConnected(vpnName))
@@ -161,6 +167,7 @@ namespace TeamsTrayStarter
             {
                 var stored = RasCredentialHelper.GetStoredCredentials(null, vpnName);
                 string args;
+
                 if (stored != null && !string.IsNullOrWhiteSpace(stored.UserName))
                 {
                     if (!string.IsNullOrWhiteSpace(stored.Domain))
@@ -171,24 +178,27 @@ namespace TeamsTrayStarter
                     {
                         args = $"\"{vpnName}\" \"{stored.UserName}\" \"{stored.PasswordHandle}\"";
                     }
+
                     Logger.Change($"Using stored RAS credentials for VPN: {vpnName}");
                 }
                 else
                 {
-                    Logger.Warn($"No stored RAS credentials found for VPN entry: {vpnName}");
+                    Logger.Other($"No stored RAS credentials found for VPN entry: {vpnName}");
                     args = $"\"{vpnName}\"";
                 }
 
                 var result = RunProcess("rasdial.exe", args);
                 if (result.ExitCode != 0)
                 {
-                    string details = (result.StdOut + " " + result.StdErr).Replace(Environment.NewLine, " ").Trim();
-                    Logger.Warn($"TryStartVpnConnection: rasdial returned {result.ExitCode} => {details}");
+                    string details = (result.StdOut + " " + result.StdErr)
+                        .Replace(Environment.NewLine, " ")
+                        .Trim();
+                    Logger.Other($"TryStartVpnConnection: rasdial returned {result.ExitCode} => {details}");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Warn($"TryStartVpnConnection failed: {ex.Message}");
+                Logger.Other($"TryStartVpnConnection failed: {ex.Message}");
             }
         }
 
@@ -211,6 +221,7 @@ namespace TeamsTrayStarter
                         StandardErrorEncoding = Encoding.UTF8
                     }
                 };
+
                 process.Start();
                 string stdOut = process.StandardOutput.ReadToEnd().Trim();
                 process.WaitForExit();
@@ -218,7 +229,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Warn($"IsVpnConnected: failed to query VPN status for '{vpnName}' => {ex.Message}");
+                Logger.Other($"IsVpnConnected: failed to query VPN status for '{vpnName}' => {ex.Message}");
                 return false;
             }
         }
@@ -235,6 +246,7 @@ namespace TeamsTrayStarter
                     "-NoProfile -ExecutionPolicy Bypass -Command " +
                     QuoteArgument($"(Get-VpnConnection -Name '{EscapePowerShellSingleQuotedString(vpnName)}' -ErrorAction SilentlyContinue).TunnelType"),
                     utf8: true);
+
                 string value = result.StdOut.Trim();
                 var final = string.IsNullOrWhiteSpace(value) ? null : value;
                 _vpnTypeCache[vpnName] = final;
@@ -242,7 +254,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Warn($"GetVpnType failed: {ex.Message}");
+                Logger.Other($"GetVpnType failed: {ex.Message}");
                 return null;
             }
         }
@@ -254,6 +266,7 @@ namespace TeamsTrayStarter
                 string command = allUserConnection
                     ? "Get-VpnConnection -AllUserConnection -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name"
                     : "Get-VpnConnection -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name";
+
                 using var process = new Process
                 {
                     StartInfo = new ProcessStartInfo
@@ -268,9 +281,11 @@ namespace TeamsTrayStarter
                         StandardErrorEncoding = Encoding.UTF8
                     }
                 };
+
                 process.Start();
                 string stdOut = process.StandardOutput.ReadToEnd();
                 process.WaitForExit();
+
                 foreach (var line in stdOut.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
                 {
                     string name = line.Trim();
@@ -280,7 +295,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Warn($"AddVpnNamesFromPowerShell: failed => {ex.Message}");
+                Logger.Other($"AddVpnNamesFromPowerShell: failed => {ex.Message}");
             }
         }
 
@@ -290,6 +305,7 @@ namespace TeamsTrayStarter
             {
                 if (!File.Exists(phoneBookPath))
                     return;
+
                 foreach (var line in File.ReadLines(phoneBookPath))
                 {
                     var trimmed = line.Trim();
@@ -303,7 +319,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Warn($"AddVpnNamesFromPhoneBook: failed for {phoneBookPath} => {ex.Message}");
+                Logger.Other($"AddVpnNamesFromPhoneBook: failed for {phoneBookPath} => {ex.Message}");
             }
         }
 
@@ -330,10 +346,13 @@ namespace TeamsTrayStarter
             {
                 public int dwSize;
                 public int dwMask;
+
                 [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 257)]
                 public string szUserName;
+
                 [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 257)]
                 public string szPassword;
+
                 [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 16)]
                 public string szDomain;
             }
@@ -358,6 +377,7 @@ namespace TeamsTrayStarter
                     szPassword = string.Empty,
                     szDomain = string.Empty
                 };
+
                 uint result = RasGetCredentials(phonebookPath, entryName, ref creds);
                 if (result != 0)
                     return null;

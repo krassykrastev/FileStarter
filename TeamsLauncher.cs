@@ -58,10 +58,19 @@ namespace TeamsTrayStarter
             var launchedNames = new List<string>();
             var failedNames = new List<string>();
 
-            await TryLaunchEnabledSlotAsync(settings.File1Enabled, settings.File1Path, SlotKind.TeamsDefault, 1, launchedNames, failedNames, settings.File2Enabled || settings.File3Enabled || settings.File4Enabled);
-            await TryLaunchEnabledSlotAsync(settings.File2Enabled, settings.File2Path, SlotKind.OutlookDefault, 2, launchedNames, failedNames, settings.File3Enabled || settings.File4Enabled);
-            await TryLaunchEnabledSlotAsync(settings.File3Enabled, settings.File3Path, SlotKind.CustomOnly, 3, launchedNames, failedNames, settings.File4Enabled);
-            await TryLaunchEnabledSlotAsync(settings.File4Enabled, settings.File4Path, SlotKind.CustomOnly, 4, launchedNames, failedNames, false);
+            var slots = new[]
+            {
+                new SlotDescriptor(settings.File1Enabled, settings.File1Path, SlotKind.TeamsDefault, 1),
+                new SlotDescriptor(settings.File2Enabled, settings.File2Path, SlotKind.OutlookDefault, 2),
+                new SlotDescriptor(settings.File3Enabled, settings.File3Path, SlotKind.CustomOnly, 3),
+                new SlotDescriptor(settings.File4Enabled, settings.File4Path, SlotKind.CustomOnly, 4)
+            };
+
+            for (int i = 0; i < slots.Length; i++)
+            {
+                bool delayAfter = slots.Skip(i + 1).Any(slot => slot.Enabled);
+                await TryLaunchEnabledSlotAsync(slots[i], launchedNames, failedNames, delayAfter);
+            }
 
             NotifyOutcome(failedNames, notify);
             return launchedNames.Count > 0;
@@ -77,20 +86,13 @@ namespace TeamsTrayStarter
         public static List<string> GetAvailableVpnConnectionNames()
             => VpnService.GetAvailableVpnConnectionNames();
 
-        private async Task TryLaunchEnabledSlotAsync(
-            bool enabled,
-            string? path,
-            SlotKind kind,
-            int slotIndex,
-            List<string> launchedNames,
-            List<string> failedNames,
-            bool delayAfter)
+        private async Task TryLaunchEnabledSlotAsync(SlotDescriptor slot, List<string> launchedNames, List<string> failedNames, bool delayAfter)
         {
-            if (!enabled)
+            if (!slot.Enabled)
                 return;
 
-            var result = await TryLaunchSlotWithRetryAsync(path, kind);
-            string displayName = SettingsManager.GetSlotDisplayName(slotIndex, path, 100);
+            var result = await TryLaunchSlotWithRetryAsync(slot.Path, slot.Kind);
+            string displayName = SettingsManager.GetSlotDisplayName(slot.SlotIndex, slot.Path, 100);
             if (result.Launched)
                 launchedNames.Add(displayName);
             else if (result.Failed)
@@ -130,7 +132,7 @@ namespace TeamsTrayStarter
             {
                 if (!File.Exists(targetPath))
                 {
-                    Logger.Warn($"TryLaunchCustomTarget: file not found: {targetPath}");
+                    Logger.Other($"TryLaunchCustomTarget: file not found: {targetPath}");
                     return new LaunchAttemptResult(false, true);
                 }
 
@@ -155,23 +157,23 @@ namespace TeamsTrayStarter
                         if (IsExecutableRunning(targetPath))
                             return new LaunchAttemptResult(true, false);
 
-                        Logger.Warn($"TryLaunchCustomTarget: process did not appear after launch: {targetPath}");
+                        Logger.Other($"TryLaunchCustomTarget: process did not appear after launch: {targetPath}");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Warn($"TryLaunchCustomTarget: launch failed for {targetPath} (attempt {attempt}) => {ex.Message}");
+                        Logger.Other($"TryLaunchCustomTarget: launch failed for {targetPath} (attempt {attempt}) => {ex.Message}");
                     }
 
                     if (attempt < MaxLaunchAttempts)
                         await Task.Delay(RetryDelayMs);
                 }
 
-                Logger.Warn($"TryLaunchCustomTarget: all attempts failed for {targetPath}");
+                Logger.Other($"TryLaunchCustomTarget: all attempts failed for {targetPath}");
                 return new LaunchAttemptResult(false, true);
             }
             catch (Exception ex)
             {
-                Logger.Error($"TryLaunchCustomTarget: unexpected failure for {targetPath}", ex);
+                Logger.Other($"TryLaunchCustomTarget: unexpected failure for {targetPath}", ex);
                 return new LaunchAttemptResult(false, true);
             }
         }
@@ -192,14 +194,15 @@ namespace TeamsTrayStarter
                     await Task.Delay(PostLaunchVerifyDelayMs);
                     if (isRunning())
                         return new LaunchAttemptResult(true, false);
-                    Logger.Warn($"TryLaunchDefault{appDisplayName}: {appDisplayName} not detected after launch.");
+
+                    Logger.Other($"TryLaunchDefault{appDisplayName}: {appDisplayName} not detected after launch.");
                 }
 
                 if (attempt < MaxLaunchAttempts)
                     await Task.Delay(RetryDelayMs);
             }
 
-            Logger.Error($"TryLaunchDefault{appDisplayName}: all launch attempts failed.", lastEx ?? new Exception($"Unknown {appDisplayName} error"));
+            Logger.Other($"TryLaunchDefault{appDisplayName}: all launch attempts failed.", lastEx ?? new Exception($"Unknown {appDisplayName} error"));
             return new LaunchAttemptResult(false, true);
         }
 
@@ -220,7 +223,7 @@ namespace TeamsTrayStarter
                 catch (Exception ex)
                 {
                     lastEx = ex;
-                    Logger.Warn($"TryStartTarget: failed target {target} => {ex.Message}");
+                    Logger.Other($"TryStartTarget: failed target {target} => {ex.Message}");
                 }
             }
             return false;
@@ -230,11 +233,13 @@ namespace TeamsTrayStarter
         {
             yield return "msteams:";
             yield return "ms-teams:";
+
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
             string newTeamsAlias = Path.Combine(localAppData, "Microsoft", "WindowsApps", "ms-teams.exe");
             string classicPerUser = Path.Combine(localAppData, "Microsoft", "Teams", "current", "Teams.exe");
             string classicMachine = Path.Combine(programFilesX86, "Microsoft", "Teams", "current", "Teams.exe");
+
             if (File.Exists(newTeamsAlias)) yield return newTeamsAlias;
             if (File.Exists(classicPerUser)) yield return classicPerUser;
             if (File.Exists(classicMachine)) yield return classicMachine;
@@ -249,6 +254,7 @@ namespace TeamsTrayStarter
             string office16x64 = Path.Combine(programFiles, "Microsoft Office", "root", "Office16", "OUTLOOK.EXE");
             string office16x86 = Path.Combine(programFilesX86, "Microsoft Office", "root", "Office16", "OUTLOOK.EXE");
             string? runningPath = null;
+
             try
             {
                 var running = Process.GetProcesses()
@@ -267,6 +273,7 @@ namespace TeamsTrayStarter
                 yield return runningPath;
                 yield break;
             }
+
             if (File.Exists(office16x64)) yield return office16x64;
             if (File.Exists(office16x86)) yield return office16x86;
             if (File.Exists(newOutlookAlias)) yield return newOutlookAlias;
@@ -282,7 +289,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Error("IsTeamsRunning: failed; assuming not running.", ex);
+                Logger.Other("IsTeamsRunning: failed; assuming not running.", ex);
                 return false;
             }
         }
@@ -295,7 +302,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Error("IsOutlookRunning: failed; assuming not running.", ex);
+                Logger.Other("IsOutlookRunning: failed; assuming not running.", ex);
                 return false;
             }
         }
@@ -332,7 +339,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Error("IsExecutableRunning failed.", ex);
+                Logger.Other("IsExecutableRunning failed.", ex);
                 return false;
             }
         }
@@ -348,5 +355,7 @@ namespace TeamsTrayStarter
                 return null;
             }
         }
+
+        private readonly record struct SlotDescriptor(bool Enabled, string? Path, SlotKind Kind, int SlotIndex);
     }
 }

@@ -51,17 +51,14 @@ namespace TeamsTrayStarter
             SaveIfAutoStartTransitionDue();
 
             _scheduler = new Scheduler(new TeamsLauncher(), () => _settings, SaveSettings, ShowBalloon);
-
             _autoStartToggleItem = CreateMenuItem(
                 "Auto-start ON",
                 SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now),
                 ToggleAutoStartMaster);
-
             _runAtStartupItem = CreateMenuItem(
                 "Run FileStarter on Windows startup",
                 IsRunAtStartupEnabled(),
                 ToggleRunAtStartup);
-
             _startVpnFirstItem = CreateMenuItem(
                 "Start VPN first",
                 _settings.StartVpnFirstEnabled,
@@ -83,10 +80,8 @@ namespace TeamsTrayStarter
                 _singleLeftClickTimer.Stop();
                 ToggleAutoStartMaster();
             };
-
             _tooltipUpdateTimer = new System.Windows.Forms.Timer();
             _tooltipUpdateTimer.Tick += (_, _) => UpdateTrayUi();
-
             _trayIcon.MouseClick += TrayIcon_MouseClick;
             _trayIcon.MouseDoubleClick += TrayIcon_MouseDoubleClick;
 
@@ -164,7 +159,6 @@ namespace TeamsTrayStarter
         {
             if (e.Button != MouseButtons.Left)
                 return;
-
             _singleLeftClickTimer.Stop();
             OpenSettings();
         }
@@ -201,7 +195,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Error("Startup VPN connection failed.", ex);
+                Logger.Other("Startup VPN connection failed.", ex);
                 ShowBalloon("FileStarter", "VPN failed to connect.", ToolTipIcon.Warning);
             }
         }
@@ -224,7 +218,6 @@ namespace TeamsTrayStarter
         private void UpdateTrayUi()
         {
             SaveIfAutoStartTransitionDue();
-
             bool effectiveAutoStart = SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now);
             _autoStartToggleItem.Checked = effectiveAutoStart;
             _autoStartToggleItem.Text = effectiveAutoStart ? "Auto-start ON" : "Auto-start OFF";
@@ -255,7 +248,6 @@ namespace TeamsTrayStarter
             {
                 _trayIcon.Text = effectiveAutoStart ? "Auto-start ON" : "Auto-start OFF";
             }
-
             ScheduleNextTooltipUpdate();
         }
 
@@ -308,14 +300,13 @@ namespace TeamsTrayStarter
                     EnableRunAtLogin();
                 else
                     DisableRunAtLogin();
-
                 Logger.Change(enable ? "Run on Windows startup turned ON" : "Run on Windows startup turned OFF");
                 SettingsManager.Save(_settings);
                 UpdateTrayUi();
             }
             catch (Exception ex)
             {
-                Logger.Error("Failed to update run-at-startup setting.", ex);
+                Logger.Other("Failed to update run-at-startup setting.", ex);
             }
         }
 
@@ -365,7 +356,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Error("Failed to toggle Start VPN first.", ex);
+                Logger.Other("Failed to toggle Start VPN first.", ex);
                 ShowBalloon("FileStarter", "Failed to change VPN startup setting. See log.", ToolTipIcon.Error);
             }
         }
@@ -381,7 +372,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Error("Failed to apply Run-at-startup setting.", ex);
+                Logger.Other("Failed to apply Run-at-startup setting.", ex);
                 ShowBalloon("FileStarter", "Could not set Run at startup. See log for details.", ToolTipIcon.Warning);
             }
         }
@@ -391,6 +382,7 @@ namespace TeamsTrayStarter
             var exePath = Environment.ProcessPath;
             if (string.IsNullOrWhiteSpace(exePath))
                 throw new InvalidOperationException("Cannot determine executable path.");
+
             try
             {
                 CreateStartupTaskWithSchtasks(exePath);
@@ -398,7 +390,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception taskEx)
             {
-                Logger.Error("Failed to create Task Scheduler startup entry for FileStarter. Falling back to registry startup.", taskEx);
+                Logger.Other("Failed to create Task Scheduler startup entry for FileStarter. Falling back to registry startup.", taskEx);
                 try
                 {
                     EnableRunAtLoginRegistry(exePath);
@@ -406,7 +398,7 @@ namespace TeamsTrayStarter
                 }
                 catch (Exception registryEx)
                 {
-                    Logger.Error("Task Scheduler startup setup failed and fallback registry startup setup also failed.", registryEx);
+                    Logger.Other("Task Scheduler startup setup failed and fallback registry startup setup also failed.", registryEx);
                     throw;
                 }
             }
@@ -416,6 +408,7 @@ namespace TeamsTrayStarter
         {
             Exception? taskDeleteEx = null;
             Exception? registryDeleteEx = null;
+
             try
             {
                 DeleteStartupTaskWithSchtasks();
@@ -423,8 +416,9 @@ namespace TeamsTrayStarter
             catch (Exception ex)
             {
                 taskDeleteEx = ex;
-                Logger.Error("Failed to remove Task Scheduler startup entry for FileStarter.", ex);
+                Logger.Other("Failed to remove Task Scheduler startup entry for FileStarter.", ex);
             }
+
             try
             {
                 RemoveRegistryRunEntry();
@@ -432,8 +426,9 @@ namespace TeamsTrayStarter
             catch (Exception ex)
             {
                 registryDeleteEx = ex;
-                Logger.Error("Failed to remove registry startup entry for FileStarter.", ex);
+                Logger.Other("Failed to remove registry startup entry for FileStarter.", ex);
             }
+
             if (taskDeleteEx != null && registryDeleteEx != null)
                 throw new AggregateException(taskDeleteEx, registryDeleteEx);
         }
@@ -586,94 +581,78 @@ namespace TeamsTrayStarter
 
         private void OpenSettings()
         {
-            try
-            {
-                if (TryActivateExistingForm(_settingsForm))
-                    return;
-                _settingsForm = new SettingsForm(_settings);
-                _settingsForm.FormClosed += (_, _) => ApplySettingsIfAccepted();
-                ShowOrActivateForm(_settingsForm);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Failed to open/apply settings.", ex);
-                ShowBalloon("FileStarter", "Settings update failed. See log.", ToolTipIcon.Error);
-            }
+            OpenSingleInstanceForm(
+                () => _settingsForm,
+                value => _settingsForm = value,
+                () => new SettingsForm(_settings),
+                ApplySettingsIfAccepted);
         }
 
         private void ApplySettingsIfAccepted()
         {
-            try
+            if (_settingsForm == null || !_settingsForm.Accepted || _settingsForm.ResultSettings == null)
+                return;
+
+            var before = SettingsManager.Clone(_settings);
+            _settings = _settingsForm.ResultSettings;
+            SaveIfAutoStartTransitionDue();
+            SettingsManager.Save(_settings);
+            if (SettingsManager.HasSettingsChanges(before, _settings))
             {
-                if (_settingsForm == null)
-                    return;
-                if (_settingsForm.Accepted && _settingsForm.ResultSettings != null)
-                {
-                    var before = SettingsManager.Clone(_settings);
-                    _settings = _settingsForm.ResultSettings;
-                    SaveIfAutoStartTransitionDue();
-                    SettingsManager.Save(_settings);
-                    if (SettingsManager.HasSettingsChanges(before, _settings))
-                    {
-                        SettingsManager.LogSettingsChanges(before, _settings);
-                    }
-                    UpdateTrayUi();
-                    _scheduler.StartOrReschedule();
-                }
+                SettingsManager.LogSettingsChanges(before, _settings);
             }
-            finally
-            {
-                _settingsForm = null;
-            }
+            UpdateTrayUi();
+            _scheduler.StartOrReschedule();
         }
 
         private void OpenLogViewer()
         {
-            try
-            {
-                if (TryActivateExistingForm(_logViewerForm))
-                    return;
-                _logViewerForm = new LogViewerForm();
-                _logViewerForm.FormClosed += (_, _) => _logViewerForm = null;
-                ShowOrActivateForm(_logViewerForm);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Failed to open log viewer.", ex);
-                ShowBalloon("FileStarter", "Could not open log viewer. See log.", ToolTipIcon.Warning);
-            }
+            OpenSingleInstanceForm(
+                () => _logViewerForm,
+                value => _logViewerForm = value,
+                () => new LogViewerForm());
         }
 
         private void OpenHelp()
         {
-            try
-            {
-                if (TryActivateExistingForm(_helpForm))
-                    return;
-                _helpForm = new HelpForm();
-                _helpForm.FormClosed += (_, _) => _helpForm = null;
-                ShowOrActivateForm(_helpForm);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Failed to open Help dialog.", ex);
-                ShowBalloon("FileStarter", "Could not open Help. See log for details.", ToolTipIcon.Warning);
-            }
+            OpenSingleInstanceForm(
+                () => _helpForm,
+                value => _helpForm = value,
+                () => new HelpForm());
         }
 
         private void OpenAbout()
         {
+            OpenSingleInstanceForm(
+                () => _aboutForm,
+                value => _aboutForm = value,
+                () => new AboutForm());
+        }
+
+        private void OpenSingleInstanceForm<T>(Func<T?> getter, Action<T?> setter, Func<T> factory, Action? onClosed = null) where T : Form
+        {
             try
             {
-                if (TryActivateExistingForm(_aboutForm))
+                T? existing = getter();
+                if (TryActivateExistingForm(existing))
                     return;
-                _aboutForm = new AboutForm();
-                _aboutForm.FormClosed += (_, _) => _aboutForm = null;
-                ShowOrActivateForm(_aboutForm);
+
+                T form = factory();
+                setter(form);
+                form.FormClosed += (_, __) =>
+                {
+                    onClosed?.Invoke();
+                    if (ReferenceEquals(getter(), form))
+                    {
+                        setter(null);
+                    }
+                };
+                ShowOrActivateForm(form);
             }
             catch (Exception ex)
             {
-                Logger.Error("Failed to open About dialog.", ex);
+                Logger.Other($"Failed to open {typeof(T).Name}.", ex);
+                ShowBalloon("FileStarter", $"Could not open {typeof(T).Name}. See log.", ToolTipIcon.Warning);
             }
         }
 
@@ -734,7 +713,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Error($"Failed to open URL: {url}", ex);
+                Logger.Other($"Failed to open URL: {url}", ex);
                 if (owner != null)
                 {
                     MessageBox.Show(owner, failureMessage, failureTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -753,7 +732,6 @@ namespace TeamsTrayStarter
                 string? exePath = Environment.ProcessPath;
                 if (string.IsNullOrWhiteSpace(exePath))
                     return null;
-
                 using Icon? appIcon = Icon.ExtractAssociatedIcon(exePath);
                 return appIcon?.ToBitmap();
             }

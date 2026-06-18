@@ -10,8 +10,6 @@ namespace TeamsTrayStarter
         private static readonly string[] SlotLabels = { "File 1", "File 2", "File 3", "File 4" };
         private static readonly string[] SlotDefaultTexts = { "MS Teams", "MS Outlook", "not yet selected", "not yet selected" };
 
-        // Allows the scheduler to still treat "today at 09:00" as valid if the check happens
-        // slightly late (for example 09:00:05 or 09:00:30) instead of skipping to tomorrow.
         private static readonly TimeSpan LaunchGracePeriod = TimeSpan.FromMinutes(1);
 
         public static string AppDataFolder =>
@@ -38,7 +36,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                try { Logger.Error("Failed to load settings; using defaults.", ex); } catch { }
+                try { Logger.Other("Failed to load settings; using defaults.", ex); } catch { }
                 return AppSettings.CreateDefault();
             }
         }
@@ -75,7 +73,7 @@ namespace TeamsTrayStarter
                 return time;
             }
 
-            Logger.Warn($"Invalid time '{daySetting.Time}' for {day}. Falling back to 09:00.");
+            Logger.Other($"Invalid time '{daySetting.Time}' for {day}. Falling back to 09:00.");
             return new TimeSpan(9, 0, 0);
         }
 
@@ -100,15 +98,12 @@ namespace TeamsTrayStarter
 
                 var candidate = date.Add(GetDayLaunchTimeOrDefault(settings, date.DayOfWeek));
 
-                // Future candidate on a later day is always valid.
                 if (candidate.Date > nowLocal.Date)
                     return candidate;
 
-                // Future candidate later today is valid.
                 if (candidate >= nowLocal)
                     return candidate;
 
-                // Candidate earlier today is still valid if we are only slightly late.
                 if (candidate.Date == nowLocal.Date &&
                     nowLocal - candidate <= LaunchGracePeriod)
                 {
@@ -133,10 +128,8 @@ namespace TeamsTrayStarter
         {
             if (string.IsNullOrWhiteSpace(text))
                 return text;
-
             if (maxLength <= 3)
                 return text.Length <= maxLength ? text : text.Substring(0, maxLength);
-
             return text.Length <= maxLength ? text : text.Substring(0, maxLength - 3) + "...";
         }
 
@@ -181,7 +174,6 @@ namespace TeamsTrayStarter
 
             DateTime today = nowLocal.Date;
             DateTime start = settings.AutoStartOffFromDate.Value.Date;
-
             if (today < start)
                 return false;
 
@@ -202,7 +194,6 @@ namespace TeamsTrayStarter
             if (settings.AutoStartOffUntilEnabled && settings.AutoStartOffUntilDate != null)
             {
                 DateTime end = settings.AutoStartOffUntilDate.Value.Date;
-
                 if (today < start || today <= end)
                     return false;
 
@@ -281,6 +272,7 @@ namespace TeamsTrayStarter
         public static void LogSettingsChanges(AppSettings before, AppSettings after)
         {
             var changes = new List<string>();
+
             AddChange(changes, "Run at Windows startup", before.RunAppAtStartup, after.RunAppAtStartup);
             AddChange(changes, "Start VPN first", before.StartVpnFirstEnabled, after.StartVpnFirstEnabled);
             AddChange(changes, "VPN connection name", before.VpnConnectionName, after.VpnConnectionName);
@@ -327,7 +319,6 @@ namespace TeamsTrayStarter
         {
             string normalizedBefore = NormalizeDisplay(before);
             string normalizedAfter = NormalizeDisplay(after);
-
             if (!string.Equals(normalizedBefore, normalizedAfter, StringComparison.OrdinalIgnoreCase))
                 changes.Add($"{label}: {normalizedBefore} -> {normalizedAfter}");
         }
@@ -336,7 +327,6 @@ namespace TeamsTrayStarter
         {
             string normalizedBefore = before?.ToString("yyyy-MM-dd") ?? "<none>";
             string normalizedAfter = after?.ToString("yyyy-MM-dd") ?? "<none>";
-
             if (!string.Equals(normalizedBefore, normalizedAfter, StringComparison.OrdinalIgnoreCase))
                 changes.Add($"{label}: {normalizedBefore} -> {normalizedAfter}");
         }

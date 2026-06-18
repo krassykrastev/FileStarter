@@ -23,7 +23,6 @@ namespace TeamsTrayStarter
         private readonly FileSystemWatcher _fileWatcher;
         private readonly System.Windows.Forms.Timer _refreshTimer;
         private readonly System.Windows.Forms.Timer _initialLoadTimer;
-
         private bool _refreshPending;
         private bool _hasLoadedOnce;
 
@@ -54,13 +53,11 @@ namespace TeamsTrayStarter
                 BackColor = Color.White,
                 Padding = new Padding(10)
             };
-
             _contentPanel = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White
             };
-
             _actionsPanel = new FlowLayoutPanel
             {
                 AutoSize = true,
@@ -70,7 +67,6 @@ namespace TeamsTrayStarter
                 BackColor = Color.Transparent,
                 Margin = new Padding(0)
             };
-
             _filtersPanel = new FlowLayoutPanel
             {
                 AutoSize = true,
@@ -82,9 +78,8 @@ namespace TeamsTrayStarter
                 Padding = new Padding(0)
             };
 
-            _clearLogButton = CreateActionButton("Clear log", (_, __) => ClearLog());
-            _exportLogButton = CreateActionButton("Export log", (_, __) => ExportLog());
-
+            _clearLogButton = CreateActionButton("Clear log", (_, _) => ClearLog());
+            _exportLogButton = CreateActionButton("Export log", (_, _) => ExportLog());
             _showLabel = new Label
             {
                 AutoSize = false,
@@ -97,17 +92,14 @@ namespace TeamsTrayStarter
                 Margin = new Padding(0, 0, 4, 0),
                 UseCompatibleTextRendering = false
             };
-
             _otherFilterButton = CreateFilterToggle("Other", 126);
             _changeFilterButton = CreateFilterToggle("Changes", 132);
 
             _actionsPanel.Controls.Add(_clearLogButton);
             _actionsPanel.Controls.Add(_exportLogButton);
-
             _filtersPanel.Controls.Add(_showLabel);
             _filtersPanel.Controls.Add(_otherFilterButton);
             _filtersPanel.Controls.Add(_changeFilterButton);
-
             _topPanel.Controls.Add(_actionsPanel);
             _topPanel.Controls.Add(_filtersPanel);
 
@@ -125,13 +117,13 @@ namespace TeamsTrayStarter
                 ScrollBars = RichTextBoxScrollBars.Vertical,
                 ShortcutsEnabled = true
             };
-
             _contentPanel.Controls.Add(_logRichTextBox);
+
             Controls.Add(_contentPanel);
             Controls.Add(_topPanel);
 
             _refreshTimer = new System.Windows.Forms.Timer { Interval = 300 };
-            _refreshTimer.Tick += (_, __) =>
+            _refreshTimer.Tick += (_, _) =>
             {
                 _refreshTimer.Stop();
                 if (_refreshPending)
@@ -142,7 +134,7 @@ namespace TeamsTrayStarter
             };
 
             _initialLoadTimer = new System.Windows.Forms.Timer { Interval = 1 };
-            _initialLoadTimer.Tick += (_, __) =>
+            _initialLoadTimer.Tick += (_, _) =>
             {
                 _initialLoadTimer.Stop();
                 LoadAndRenderLog();
@@ -153,24 +145,22 @@ namespace TeamsTrayStarter
             string fileName = Path.GetFileName(Logger.LogFilePath);
             if (string.IsNullOrWhiteSpace(fileName))
                 fileName = "app.log";
-
             Directory.CreateDirectory(directory);
+
             _fileWatcher = new FileSystemWatcher(directory, fileName)
             {
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
                 EnableRaisingEvents = true,
                 IncludeSubdirectories = false
             };
+            _fileWatcher.Changed += (_, _) => ScheduleRefresh();
+            _fileWatcher.Created += (_, _) => ScheduleRefresh();
+            _fileWatcher.Deleted += (_, _) => ScheduleRefresh();
+            _fileWatcher.Renamed += (_, _) => ScheduleRefresh();
 
-            _fileWatcher.Changed += (_, __) => ScheduleRefresh();
-            _fileWatcher.Created += (_, __) => ScheduleRefresh();
-            _fileWatcher.Deleted += (_, __) => ScheduleRefresh();
-            _fileWatcher.Renamed += (_, __) => ScheduleRefresh();
-
-            Resize += (_, __) => LayoutTopPanels();
-            Shown += (_, __) => _initialLoadTimer.Start();
-            FormClosed += (_, __) => DisposeResources();
-
+            Resize += (_, _) => LayoutTopPanels();
+            Shown += (_, _) => _initialLoadTimer.Start();
+            FormClosed += (_, _) => DisposeResources();
             LayoutTopPanels();
         }
 
@@ -192,7 +182,6 @@ namespace TeamsTrayStarter
                 TextAlign = ContentAlignment.MiddleCenter,
                 UseCompatibleTextRendering = true
             };
-
             button.FlatAppearance.BorderColor = Color.FromArgb(214, 219, 226);
             button.FlatAppearance.BorderSize = 1;
             button.FlatAppearance.MouseDownBackColor = Color.FromArgb(235, 238, 242);
@@ -219,16 +208,14 @@ namespace TeamsTrayStarter
                 UseCompatibleTextRendering = true,
                 Tag = text
             };
-
             check.FlatAppearance.BorderSize = 1;
             check.Paint += FilterToggle_Paint;
-            check.CheckedChanged += (_, __) =>
+            check.CheckedChanged += (_, _) =>
             {
                 ApplyFilterStyle(check);
                 check.Invalidate();
                 LoadAndRenderLog();
             };
-
             ApplyFilterStyle(check);
             return check;
         }
@@ -237,15 +224,12 @@ namespace TeamsTrayStarter
         {
             if (sender is not CheckBox check)
                 return;
-
             string text = check.Tag?.ToString() ?? string.Empty;
             const int reservedLeftWidth = 28;
             const int reservedRightWidth = 28;
             const int checkGlyphWidth = 12;
-
             var checkRect = new Rectangle(reservedLeftWidth - checkGlyphWidth, 0, checkGlyphWidth, check.ClientSize.Height);
             var textRect = new Rectangle(reservedLeftWidth, 0, check.ClientSize.Width - reservedLeftWidth - reservedRightWidth, check.ClientSize.Height);
-
             if (check.Checked)
             {
                 TextRenderer.DrawText(
@@ -256,7 +240,6 @@ namespace TeamsTrayStarter
                     check.ForeColor,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
             }
-
             TextRenderer.DrawText(
                 e.Graphics,
                 text,
@@ -293,7 +276,6 @@ namespace TeamsTrayStarter
         {
             if (IsDisposed)
                 return;
-
             try
             {
                 BeginInvoke(new Action(() =>
@@ -313,13 +295,11 @@ namespace TeamsTrayStarter
             int firstVisibleLine = 0;
             int selectionStart = 0;
             bool preserveView = _hasLoadedOnce && _logRichTextBox.IsHandleCreated;
-
             if (preserveView)
             {
                 firstVisibleLine = GetFirstVisibleLine();
                 selectionStart = _logRichTextBox.SelectionStart;
             }
-
             RenderEntries(Logger.ReadEntries(), preserveView, firstVisibleLine, selectionStart);
         }
 
@@ -338,14 +318,12 @@ namespace TeamsTrayStarter
             SendMessage(_logRichTextBox.Handle, WmSetRedraw, IntPtr.Zero, IntPtr.Zero);
             _logRichTextBox.SuspendLayout();
             _logRichTextBox.Clear();
-
             for (int i = entries.Count - 1; i >= 0; i--)
             {
                 var entry = entries[i];
                 var kind = GetKind(entry.Level);
                 if (!ShouldShow(kind))
                     continue;
-
                 Color kindColor = GetColor(kind);
                 _logRichTextBox.SelectionColor = kindColor;
                 _logRichTextBox.AppendText(GetEmoji(kind) + " ");
@@ -354,13 +332,10 @@ namespace TeamsTrayStarter
                 AppendMessageWithHighlights(entry.Message, kindColor);
                 _logRichTextBox.AppendText(Environment.NewLine);
             }
-
             _logRichTextBox.SelectionStart = preserveView ? Math.Min(selectionStart, _logRichTextBox.TextLength) : 0;
             _logRichTextBox.SelectionLength = 0;
-
             if (preserveView)
                 RestoreFirstVisibleLine(firstVisibleLine);
-
             _logRichTextBox.ResumeLayout();
             SendMessage(_logRichTextBox.Handle, WmSetRedraw, new IntPtr(1), IntPtr.Zero);
             _logRichTextBox.Invalidate();
@@ -371,31 +346,26 @@ namespace TeamsTrayStarter
         {
             if (string.IsNullOrEmpty(message))
                 return;
-
             int index = 0;
             while (index < message.Length)
             {
                 int nextOn = message.IndexOf("ON", index, StringComparison.Ordinal);
                 int nextOff = message.IndexOf("OFF", index, StringComparison.Ordinal);
-
                 if (nextOn < 0 && nextOff < 0)
                 {
                     _logRichTextBox.SelectionColor = defaultColor;
                     _logRichTextBox.AppendText(message[index..]);
                     break;
                 }
-
                 bool useOn = nextOn >= 0 && (nextOff < 0 || nextOn < nextOff);
                 int tokenIndex = useOn ? nextOn : nextOff;
                 string token = useOn ? "ON" : "OFF";
                 Color tokenColor = useOn ? Color.FromArgb(22, 101, 52) : Color.Crimson;
-
                 if (tokenIndex > index)
                 {
                     _logRichTextBox.SelectionColor = defaultColor;
                     _logRichTextBox.AppendText(message.Substring(index, tokenIndex - index));
                 }
-
                 _logRichTextBox.SelectionColor = tokenColor;
                 _logRichTextBox.AppendText(token);
                 index = tokenIndex + token.Length;
@@ -411,15 +381,7 @@ namespace TeamsTrayStarter
             };
 
         private static LogEntryKind GetKind(string level)
-            => level.ToUpperInvariant() switch
-            {
-                "CHANGE" => LogEntryKind.Change,
-                // backward compatibility for older logs
-                "WARN" => LogEntryKind.Other,
-                "ERROR" => LogEntryKind.Other,
-                "OTHER" => LogEntryKind.Other,
-                _ => LogEntryKind.Other
-            };
+            => string.Equals(level, "CHANGE", StringComparison.OrdinalIgnoreCase) ? LogEntryKind.Change : LogEntryKind.Other;
 
         private static string GetEmoji(LogEntryKind kind)
             => kind switch
@@ -456,10 +418,8 @@ namespace TeamsTrayStarter
                 AddExtension = true,
                 OverwritePrompt = true
             };
-
             if (dialog.ShowDialog(this) != DialogResult.OK)
                 return;
-
             var sb = new StringBuilder();
             var entries = Logger.ReadEntries();
             for (int i = entries.Count - 1; i >= 0; i--)
@@ -468,12 +428,10 @@ namespace TeamsTrayStarter
                 var kind = GetKind(entry.Level);
                 if (!ShouldShow(kind))
                     continue;
-
                 sb.Append(GetEmoji(kind)).Append(' ')
                   .Append(entry.Timestamp).Append("  ")
                   .AppendLine(entry.Message);
             }
-
             File.WriteAllText(dialog.FileName, sb.ToString(), Encoding.UTF8);
         }
 

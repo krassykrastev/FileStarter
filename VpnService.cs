@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -14,11 +15,9 @@ namespace TeamsTrayStarter
         private static readonly TimeSpan VpnWaitWindow = TimeSpan.FromMinutes(1);
         private static readonly TimeSpan VpnStatusPollInterval = TimeSpan.FromSeconds(5);
         private const int SilentStartupRetryAttempts = 5;
-
-        
         private static readonly Dictionary<string, string?> _vpnTypeCache = new(StringComparer.OrdinalIgnoreCase);
 
-        private static (int ExitCode, string StdOut, string StdErr) RunProcess(string fileName,string arguments,bool utf8 = false)
+        private static (int ExitCode, string StdOut, string StdErr) RunProcess(string fileName, string arguments, bool utf8 = false)
         {
             using var process = new Process
             {
@@ -34,12 +33,10 @@ namespace TeamsTrayStarter
                     StandardErrorEncoding = utf8 ? Encoding.UTF8 : null
                 }
             };
-
             process.Start();
             string stdOut = process.StandardOutput.ReadToEnd();
             string stdErr = process.StandardError.ReadToEnd();
             process.WaitForExit();
-
             return (process.ExitCode, stdOut, stdErr);
         }
 
@@ -48,13 +45,11 @@ namespace TeamsTrayStarter
             var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             AddVpnNamesFromPowerShell(result, allUserConnection: false);
             AddVpnNamesFromPowerShell(result, allUserConnection: true);
-
             if (result.Count == 0)
             {
                 AddVpnNamesFromPhoneBook(result, GetUserPhoneBookPath());
                 AddVpnNamesFromPhoneBook(result, GetAllUsersPhoneBookPath());
             }
-
             return result.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
         }
 
@@ -67,7 +62,6 @@ namespace TeamsTrayStarter
             try
             {
                 string vpnName = settings.VpnConnectionName?.Trim() ?? string.Empty;
-
                 if (string.IsNullOrWhiteSpace(vpnName))
                 {
                     Logger.Warn("VPN start requested but no VPN connection is selected.");
@@ -89,7 +83,6 @@ namespace TeamsTrayStarter
                     for (int attempt = 1; attempt <= SilentStartupRetryAttempts; attempt++)
                     {
                         TryStartVpnConnection(vpnName);
-
                         bool connected = await WaitForVpnConnectionAsync(vpnName, VpnWaitWindow);
                         if (connected)
                         {
@@ -108,7 +101,6 @@ namespace TeamsTrayStarter
                 while (true)
                 {
                     TryStartVpnConnection(vpnName);
-
                     bool connected = await WaitForVpnConnectionAsync(vpnName, VpnWaitWindow);
                     if (connected)
                     {
@@ -128,12 +120,10 @@ namespace TeamsTrayStarter
                     {
                         settings.StartVpnFirstEnabled = false;
                         settings.VpnConnectionName = null;
-
                         if (saveSettings != null)
                             saveSettings(settings);
                         else
                             SettingsManager.Save(settings);
-
                         Logger.Change("Start VPN first turned OFF");
                         notify("FileStarter", "Start VPN first was disabled because the VPN connection could not be established.", ToolTipIcon.Warning);
                         return false;
@@ -151,7 +141,6 @@ namespace TeamsTrayStarter
         private static async Task<bool> WaitForVpnConnectionAsync(string vpnName, TimeSpan timeout)
         {
             DateTime deadline = DateTime.Now.Add(timeout);
-
             while (DateTime.Now < deadline)
             {
                 if (IsVpnConnected(vpnName))
@@ -159,7 +148,6 @@ namespace TeamsTrayStarter
 
                 TimeSpan remaining = deadline - DateTime.Now;
                 TimeSpan delay = remaining < VpnStatusPollInterval ? remaining : VpnStatusPollInterval;
-
                 if (delay > TimeSpan.Zero)
                     await Task.Delay(delay);
             }
@@ -173,7 +161,6 @@ namespace TeamsTrayStarter
             {
                 var stored = RasCredentialHelper.GetStoredCredentials(null, vpnName);
                 string args;
-
                 if (stored != null && !string.IsNullOrWhiteSpace(stored.UserName))
                 {
                     if (!string.IsNullOrWhiteSpace(stored.Domain))
@@ -184,7 +171,6 @@ namespace TeamsTrayStarter
                     {
                         args = $"\"{vpnName}\" \"{stored.UserName}\" \"{stored.PasswordHandle}\"";
                     }
-
                     Logger.Change($"Using stored RAS credentials for VPN: {vpnName}");
                 }
                 else
@@ -194,13 +180,9 @@ namespace TeamsTrayStarter
                 }
 
                 var result = RunProcess("rasdial.exe", args);
-
                 if (result.ExitCode != 0)
                 {
-                    string details = (result.StdOut + " " + result.StdErr)
-                        .Replace(Environment.NewLine, " ")
-                        .Trim();
-
+                    string details = (result.StdOut + " " + result.StdErr).Replace(Environment.NewLine, " ").Trim();
                     Logger.Warn($"TryStartVpnConnection: rasdial returned {result.ExitCode} => {details}");
                 }
             }
@@ -209,6 +191,7 @@ namespace TeamsTrayStarter
                 Logger.Warn($"TryStartVpnConnection failed: {ex.Message}");
             }
         }
+
         private static bool IsVpnConnected(string vpnName)
         {
             try
@@ -228,11 +211,9 @@ namespace TeamsTrayStarter
                         StandardErrorEncoding = Encoding.UTF8
                     }
                 };
-
                 process.Start();
                 string stdOut = process.StandardOutput.ReadToEnd().Trim();
                 process.WaitForExit();
-
                 return string.Equals(stdOut, "Connected", StringComparison.OrdinalIgnoreCase);
             }
             catch (Exception ex)
@@ -254,10 +235,8 @@ namespace TeamsTrayStarter
                     "-NoProfile -ExecutionPolicy Bypass -Command " +
                     QuoteArgument($"(Get-VpnConnection -Name '{EscapePowerShellSingleQuotedString(vpnName)}' -ErrorAction SilentlyContinue).TunnelType"),
                     utf8: true);
-
                 string value = result.StdOut.Trim();
                 var final = string.IsNullOrWhiteSpace(value) ? null : value;
-
                 _vpnTypeCache[vpnName] = final;
                 return final;
             }
@@ -275,7 +254,6 @@ namespace TeamsTrayStarter
                 string command = allUserConnection
                     ? "Get-VpnConnection -AllUserConnection -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name"
                     : "Get-VpnConnection -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name";
-
                 using var process = new Process
                 {
                     StartInfo = new ProcessStartInfo
@@ -290,11 +268,9 @@ namespace TeamsTrayStarter
                         StandardErrorEncoding = Encoding.UTF8
                     }
                 };
-
                 process.Start();
                 string stdOut = process.StandardOutput.ReadToEnd();
                 process.WaitForExit();
-
                 foreach (var line in stdOut.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
                 {
                     string name = line.Trim();
@@ -314,7 +290,6 @@ namespace TeamsTrayStarter
             {
                 if (!File.Exists(phoneBookPath))
                     return;
-
                 foreach (var line in File.ReadLines(phoneBookPath))
                 {
                     var trimmed = line.Trim();
@@ -343,5 +318,57 @@ namespace TeamsTrayStarter
 
         private static string EscapePowerShellSingleQuotedString(string value)
             => (value ?? string.Empty).Replace("'", "''");
+
+        private static class RasCredentialHelper
+        {
+            private const int RASCM_UserName = 0x00000001;
+            private const int RASCM_Password = 0x00000002;
+            private const int RASCM_Domain = 0x00000004;
+
+            [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+            private struct RASCREDENTIALS
+            {
+                public int dwSize;
+                public int dwMask;
+                [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 257)]
+                public string szUserName;
+                [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 257)]
+                public string szPassword;
+                [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 16)]
+                public string szDomain;
+            }
+
+            [DllImport("rasapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+            private static extern uint RasGetCredentials(string? lpszPhonebook, string lpszEntry, ref RASCREDENTIALS lpCredentials);
+
+            internal sealed class RasStoredCredential
+            {
+                public string UserName { get; init; } = string.Empty;
+                public string PasswordHandle { get; init; } = string.Empty;
+                public string Domain { get; init; } = string.Empty;
+            }
+
+            internal static RasStoredCredential? GetStoredCredentials(string? phonebookPath, string entryName)
+            {
+                var creds = new RASCREDENTIALS
+                {
+                    dwSize = Marshal.SizeOf<RASCREDENTIALS>(),
+                    dwMask = RASCM_UserName | RASCM_Password | RASCM_Domain,
+                    szUserName = string.Empty,
+                    szPassword = string.Empty,
+                    szDomain = string.Empty
+                };
+                uint result = RasGetCredentials(phonebookPath, entryName, ref creds);
+                if (result != 0)
+                    return null;
+
+                return new RasStoredCredential
+                {
+                    UserName = creds.szUserName ?? string.Empty,
+                    PasswordHandle = creds.szPassword ?? string.Empty,
+                    Domain = creds.szDomain ?? string.Empty
+                };
+            }
+        }
     }
 }

@@ -10,6 +10,7 @@ namespace TeamsTrayStarter
         private static readonly Color EnabledTextColor = Color.Black;
         private static readonly Color DisabledTextColor = SystemColors.GrayText;
 
+        private readonly AppSettings _editedSettings;
         private readonly Label _daysHeaderLabel;
         private readonly Label _vacationModeLabel;
         private readonly CheckBox _autoStartOffFromCheckBox;
@@ -22,35 +23,12 @@ namespace TeamsTrayStarter
         private readonly FileRow[] _fileRows;
 
         public bool Accepted { get; private set; }
-        public bool MonEnabled { get; private set; }
-        public bool TueEnabled { get; private set; }
-        public bool WedEnabled { get; private set; }
-        public bool ThuEnabled { get; private set; }
-        public bool FriEnabled { get; private set; }
-        public bool SatEnabled { get; private set; }
-        public bool SunEnabled { get; private set; }
-        public string MonTimeHHmm { get; private set; } = "09:00";
-        public string TueTimeHHmm { get; private set; } = "09:00";
-        public string WedTimeHHmm { get; private set; } = "09:00";
-        public string ThuTimeHHmm { get; private set; } = "09:00";
-        public string FriTimeHHmm { get; private set; } = "09:00";
-        public string SatTimeHHmm { get; private set; } = "09:00";
-        public string SunTimeHHmm { get; private set; } = "09:00";
-        public bool AutoStartOffFromEnabled { get; private set; }
-        public DateTime? AutoStartOffFromDate { get; private set; }
-        public bool AutoStartOffUntilEnabled { get; private set; }
-        public DateTime? AutoStartOffUntilDate { get; private set; }
-        public bool File1Enabled { get; private set; }
-        public bool File2Enabled { get; private set; }
-        public bool File3Enabled { get; private set; }
-        public bool File4Enabled { get; private set; }
-        public string? File1Path { get; private set; }
-        public string? File2Path { get; private set; }
-        public string? File3Path { get; private set; }
-        public string? File4Path { get; private set; }
+        public AppSettings? ResultSettings { get; private set; }
 
         public SettingsForm(AppSettings current)
         {
+            _editedSettings = SettingsManager.Clone(current);
+
             Text = "Settings";
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterScreen;
@@ -102,13 +80,13 @@ namespace TeamsTrayStarter
 
             _dayRows = new[]
             {
-                CreateDayRow("Mon", current.Mon, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 0),
-                CreateDayRow("Tue", current.Tue, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 1),
-                CreateDayRow("Wed", current.Wed, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 2),
-                CreateDayRow("Thu", current.Thu, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 3),
-                CreateDayRow("Fri", current.Fri, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 4),
-                CreateDayRow("Sat", current.Sat, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 5),
-                CreateDayRow("Sun", current.Sun, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 6)
+                CreateDayRow("Mon", _editedSettings.Mon, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 0),
+                CreateDayRow("Tue", _editedSettings.Tue, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 1),
+                CreateDayRow("Wed", _editedSettings.Wed, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 2),
+                CreateDayRow("Thu", _editedSettings.Thu, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 3),
+                CreateDayRow("Fri", _editedSettings.Fri, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 4),
+                CreateDayRow("Sat", _editedSettings.Sat, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 5),
+                CreateDayRow("Sun", _editedSettings.Sun, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 6)
             };
 
             var selectFilesLabel = new Label
@@ -124,10 +102,10 @@ namespace TeamsTrayStarter
             int fileRowY = rightHeaderY + fileSectionLabelGap;
             _fileRows = new[]
             {
-                CreateFileRow(1, current.File1Path, current.File1Enabled, fileRowY + fileRowGap * 0, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth, fileActionX, fileActionWidth, "Default"),
-                CreateFileRow(2, current.File2Path, current.File2Enabled, fileRowY + fileRowGap * 1, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth, fileActionX, fileActionWidth, "Default"),
-                CreateFileRow(3, current.File3Path, current.File3Enabled, fileRowY + fileRowGap * 2, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth, fileActionX, fileActionWidth, "Clear"),
-                CreateFileRow(4, current.File4Path, current.File4Enabled, fileRowY + fileRowGap * 3, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth, fileActionX, fileActionWidth, "Clear")
+                CreateFileRow(1, _editedSettings.File1Path, _editedSettings.File1Enabled, fileRowY + fileRowGap * 0, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth, fileActionX, fileActionWidth, "Default"),
+                CreateFileRow(2, _editedSettings.File2Path, _editedSettings.File2Enabled, fileRowY + fileRowGap * 1, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth, fileActionX, fileActionWidth, "Default"),
+                CreateFileRow(3, _editedSettings.File3Path, _editedSettings.File3Enabled, fileRowY + fileRowGap * 2, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth, fileActionX, fileActionWidth, "Clear"),
+                CreateFileRow(4, _editedSettings.File4Path, _editedSettings.File4Enabled, fileRowY + fileRowGap * 3, fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth, fileActionX, fileActionWidth, "Clear")
             };
 
             foreach (var row in _fileRows)
@@ -155,13 +133,13 @@ namespace TeamsTrayStarter
                 Text = "Turn auto-start OFF from this date",
                 AutoSize = true,
                 Location = new Point(rightColumnX, futureOffFromY + 4),
-                Checked = current.AutoStartOffFromEnabled,
-                ForeColor = current.AutoStartOffFromEnabled ? EnabledTextColor : DisabledTextColor
+                Checked = _editedSettings.AutoStartOffFromEnabled,
+                ForeColor = _editedSettings.AutoStartOffFromEnabled ? EnabledTextColor : DisabledTextColor
             };
             Controls.Add(_autoStartOffFromCheckBox);
 
-            DateTime initialFromDate = current.AutoStartOffFromDate.HasValue && current.AutoStartOffFromDate.Value.Date >= DateTime.Today
-                ? current.AutoStartOffFromDate.Value.Date
+            DateTime initialFromDate = _editedSettings.AutoStartOffFromDate.HasValue && _editedSettings.AutoStartOffFromDate.Value.Date >= DateTime.Today
+                ? _editedSettings.AutoStartOffFromDate.Value.Date
                 : DateTime.Today;
             _autoStartOffFromDatePicker = new DateTimePicker
             {
@@ -171,7 +149,7 @@ namespace TeamsTrayStarter
                 Location = new Point(futureOffDateX, futureOffFromY),
                 MinDate = DateTime.Today,
                 Value = initialFromDate,
-                Enabled = current.AutoStartOffFromEnabled
+                Enabled = _editedSettings.AutoStartOffFromEnabled
             };
             Controls.Add(_autoStartOffFromDatePicker);
 
@@ -180,8 +158,8 @@ namespace TeamsTrayStarter
                 Text = "Turn auto-start OFF until this date",
                 AutoSize = true,
                 Location = new Point(rightColumnX, futureOffUntilY + 4),
-                Checked = current.AutoStartOffUntilEnabled,
-                ForeColor = current.AutoStartOffUntilEnabled ? EnabledTextColor : DisabledTextColor
+                Checked = _editedSettings.AutoStartOffUntilEnabled,
+                ForeColor = _editedSettings.AutoStartOffUntilEnabled ? EnabledTextColor : DisabledTextColor
             };
             Controls.Add(_autoStartOffUntilCheckBox);
 
@@ -193,10 +171,10 @@ namespace TeamsTrayStarter
                 Width = futureOffDateWidth,
                 Location = new Point(futureOffDateX, futureOffUntilY),
                 MinDate = initialUntilMinDate,
-                Value = current.AutoStartOffUntilDate.HasValue && current.AutoStartOffUntilDate.Value.Date >= initialUntilMinDate
-                    ? current.AutoStartOffUntilDate.Value.Date
+                Value = _editedSettings.AutoStartOffUntilDate.HasValue && _editedSettings.AutoStartOffUntilDate.Value.Date >= initialUntilMinDate
+                    ? _editedSettings.AutoStartOffUntilDate.Value.Date
                     : initialUntilMinDate,
-                Enabled = current.AutoStartOffFromEnabled && current.AutoStartOffUntilEnabled
+                Enabled = _editedSettings.AutoStartOffFromEnabled && _editedSettings.AutoStartOffUntilEnabled
             };
             Controls.Add(_autoStartOffUntilDatePicker);
 
@@ -229,7 +207,6 @@ namespace TeamsTrayStarter
             Controls.Add(_cancelButton);
             AcceptButton = _okButton;
             CancelButton = _cancelButton;
-
             ResumeLayout(false);
             PerformLayout();
         }
@@ -270,7 +247,7 @@ namespace TeamsTrayStarter
             Controls.Add(checkBox);
             Controls.Add(dayLabel);
             Controls.Add(timePicker);
-            return new DayRow(dayAbbrev, checkBox, dayLabel, timePicker);
+            return new DayRow(dayAbbrev, checkBox, timePicker);
         }
 
         private FileRow CreateFileRow(int slotIndex, string? path, bool isChecked, int y, int checkX, int textX, int textWidth, int browseX, int browseWidth, int actionX, int actionWidth, string actionText)
@@ -300,7 +277,7 @@ namespace TeamsTrayStarter
                 Height = 32,
                 Location = new Point(browseX, y),
                 FlatStyle = FlatStyle.System,
-                Enabled = isChecked
+                Enabled = true
             };
             var actionButton = new Button
             {
@@ -309,7 +286,7 @@ namespace TeamsTrayStarter
                 Height = 32,
                 Location = new Point(actionX, y),
                 FlatStyle = FlatStyle.System,
-                Enabled = isChecked && !string.IsNullOrWhiteSpace(path)
+                Enabled = !string.IsNullOrWhiteSpace(path)
             };
             Controls.Add(checkBox);
             Controls.Add(textBox);
@@ -355,8 +332,8 @@ namespace TeamsTrayStarter
         {
             bool isEnabled = row.CheckBox.Checked;
             row.TextBox.Enabled = isEnabled;
-            row.BrowseButton.Enabled = isEnabled;
-            row.ActionButton.Enabled = isEnabled && !string.IsNullOrWhiteSpace(row.Path);
+            row.BrowseButton.Enabled = true;
+            row.ActionButton.Enabled = !string.IsNullOrWhiteSpace(row.Path);
         }
 
         private void BrowseForFile(FileRow row)
@@ -392,7 +369,7 @@ namespace TeamsTrayStarter
         {
             foreach (var row in _fileRows)
             {
-                row.ActionButton.Enabled = row.CheckBox.Checked && !string.IsNullOrWhiteSpace(row.Path);
+                row.ActionButton.Enabled = !string.IsNullOrWhiteSpace(row.Path);
             }
         }
 
@@ -442,11 +419,13 @@ namespace TeamsTrayStarter
                     return;
                 }
             }
+
             foreach (var row in _fileRows)
             {
                 if (!ValidateCustomPathExists(row))
                     return;
             }
+
             if (_autoStartOffFromCheckBox.Checked)
             {
                 if (_autoStartOffFromDatePicker.Value.Date < DateTime.Today)
@@ -460,51 +439,54 @@ namespace TeamsTrayStarter
                     return;
                 }
             }
-            MonEnabled = _dayRows[0].CheckBox.Checked;
-            TueEnabled = _dayRows[1].CheckBox.Checked;
-            WedEnabled = _dayRows[2].CheckBox.Checked;
-            ThuEnabled = _dayRows[3].CheckBox.Checked;
-            FriEnabled = _dayRows[4].CheckBox.Checked;
-            SatEnabled = _dayRows[5].CheckBox.Checked;
-            SunEnabled = _dayRows[6].CheckBox.Checked;
-            MonTimeHHmm = _dayRows[0].TimePicker.Value.ToString("HH:mm");
-            TueTimeHHmm = _dayRows[1].TimePicker.Value.ToString("HH:mm");
-            WedTimeHHmm = _dayRows[2].TimePicker.Value.ToString("HH:mm");
-            ThuTimeHHmm = _dayRows[3].TimePicker.Value.ToString("HH:mm");
-            FriTimeHHmm = _dayRows[4].TimePicker.Value.ToString("HH:mm");
-            SatTimeHHmm = _dayRows[5].TimePicker.Value.ToString("HH:mm");
-            SunTimeHHmm = _dayRows[6].TimePicker.Value.ToString("HH:mm");
-            AutoStartOffFromEnabled = _autoStartOffFromCheckBox.Checked;
-            AutoStartOffFromDate = _autoStartOffFromCheckBox.Checked ? _autoStartOffFromDatePicker.Value.Date : null;
-            AutoStartOffUntilEnabled = _autoStartOffUntilCheckBox.Checked;
-            AutoStartOffUntilDate = (_autoStartOffFromCheckBox.Checked && _autoStartOffUntilCheckBox.Checked)
+
+            _editedSettings.Mon.Enabled = _dayRows[0].CheckBox.Checked;
+            _editedSettings.Tue.Enabled = _dayRows[1].CheckBox.Checked;
+            _editedSettings.Wed.Enabled = _dayRows[2].CheckBox.Checked;
+            _editedSettings.Thu.Enabled = _dayRows[3].CheckBox.Checked;
+            _editedSettings.Fri.Enabled = _dayRows[4].CheckBox.Checked;
+            _editedSettings.Sat.Enabled = _dayRows[5].CheckBox.Checked;
+            _editedSettings.Sun.Enabled = _dayRows[6].CheckBox.Checked;
+
+            _editedSettings.Mon.Time = _dayRows[0].TimePicker.Value.ToString("HH:mm");
+            _editedSettings.Tue.Time = _dayRows[1].TimePicker.Value.ToString("HH:mm");
+            _editedSettings.Wed.Time = _dayRows[2].TimePicker.Value.ToString("HH:mm");
+            _editedSettings.Thu.Time = _dayRows[3].TimePicker.Value.ToString("HH:mm");
+            _editedSettings.Fri.Time = _dayRows[4].TimePicker.Value.ToString("HH:mm");
+            _editedSettings.Sat.Time = _dayRows[5].TimePicker.Value.ToString("HH:mm");
+            _editedSettings.Sun.Time = _dayRows[6].TimePicker.Value.ToString("HH:mm");
+
+            _editedSettings.AutoStartOffFromEnabled = _autoStartOffFromCheckBox.Checked;
+            _editedSettings.AutoStartOffFromDate = _autoStartOffFromCheckBox.Checked ? _autoStartOffFromDatePicker.Value.Date : null;
+            _editedSettings.AutoStartOffUntilEnabled = _autoStartOffUntilCheckBox.Checked;
+            _editedSettings.AutoStartOffUntilDate = (_autoStartOffFromCheckBox.Checked && _autoStartOffUntilCheckBox.Checked)
                 ? _autoStartOffUntilDatePicker.Value.Date
                 : null;
-            File1Enabled = _fileRows[0].CheckBox.Checked;
-            File2Enabled = _fileRows[1].CheckBox.Checked;
-            File3Enabled = _fileRows[2].CheckBox.Checked;
-            File4Enabled = _fileRows[3].CheckBox.Checked;
-            File1Path = _fileRows[0].Path;
-            File2Path = _fileRows[1].Path;
-            File3Path = _fileRows[2].Path;
-            File4Path = _fileRows[3].Path;
+
+            _editedSettings.File1Enabled = _fileRows[0].CheckBox.Checked;
+            _editedSettings.File2Enabled = _fileRows[1].CheckBox.Checked;
+            _editedSettings.File3Enabled = _fileRows[2].CheckBox.Checked;
+            _editedSettings.File4Enabled = _fileRows[3].CheckBox.Checked;
+            _editedSettings.File1Path = _fileRows[0].Path;
+            _editedSettings.File2Path = _fileRows[1].Path;
+            _editedSettings.File3Path = _fileRows[2].Path;
+            _editedSettings.File4Path = _fileRows[3].Path;
+
+            ResultSettings = _editedSettings;
             Accepted = true;
             Close();
         }
 
         private sealed class DayRow
         {
-            public DayRow(string name, CheckBox checkBox, Label dayLabel, DateTimePicker timePicker)
+            public DayRow(string name, CheckBox checkBox, DateTimePicker timePicker)
             {
                 Name = name;
                 CheckBox = checkBox;
-                DayLabel = dayLabel;
                 TimePicker = timePicker;
             }
-
             public string Name { get; }
             public CheckBox CheckBox { get; }
-            public Label DayLabel { get; }
             public DateTimePicker TimePicker { get; }
         }
 
@@ -520,7 +502,6 @@ namespace TeamsTrayStarter
                 ActionText = actionText;
                 Path = path;
             }
-
             public int SlotIndex { get; }
             public CheckBox CheckBox { get; }
             public TextBox TextBox { get; }

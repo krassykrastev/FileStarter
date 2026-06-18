@@ -35,6 +35,7 @@ namespace TeamsTrayStarter
         private AboutForm? _aboutForm;
         private HelpForm? _helpForm;
         private LogViewerForm? _logViewerForm;
+        private bool? _lastEffectiveAutoStartState;
 
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -42,25 +43,25 @@ namespace TeamsTrayStarter
         [DllImport("user32.dll")]
         private static extern bool PostMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
-        private bool? _lastEffectiveAutoStartState;
-
         public TrayAppContext()
         {
             TrayIconFactory.Initialize();
-
             _settings = SettingsManager.Load();
             Logger.Init(SettingsManager.AppDataFolder);
             SaveIfAutoStartTransitionDue();
 
             _scheduler = new Scheduler(new TeamsLauncher(), () => _settings, SaveSettings, ShowBalloon);
+
             _autoStartToggleItem = CreateMenuItem(
                 "Auto-start ON",
                 SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now),
                 ToggleAutoStartMaster);
+
             _runAtStartupItem = CreateMenuItem(
                 "Run FileStarter on Windows startup",
                 IsRunAtStartupEnabled(),
                 ToggleRunAtStartup);
+
             _startVpnFirstItem = CreateMenuItem(
                 "Start VPN first",
                 _settings.StartVpnFirstEnabled,
@@ -75,15 +76,8 @@ namespace TeamsTrayStarter
                 PostMessage(_menuHostForm.Handle, WM_NULL, IntPtr.Zero, IntPtr.Zero);
             };
 
-            _trayIcon = new NotifyIcon
-            {
-                Visible = true
-            };
-
-            _singleLeftClickTimer = new System.Windows.Forms.Timer
-            {
-                Interval = SystemInformation.DoubleClickTime
-            };
+            _trayIcon = new NotifyIcon { Visible = true };
+            _singleLeftClickTimer = new System.Windows.Forms.Timer { Interval = SystemInformation.DoubleClickTime };
             _singleLeftClickTimer.Tick += (_, _) =>
             {
                 _singleLeftClickTimer.Stop();
@@ -104,55 +98,21 @@ namespace TeamsTrayStarter
 
         private ContextMenuStrip BuildContextMenu()
         {
-            var menu = new ContextMenuStrip();
-            menu.Padding = new Padding(6);
-            menu.BackColor = Color.White;
-            menu.RenderMode = ToolStripRenderMode.System;
+            var menu = new ContextMenuStrip
+            {
+                Padding = new Padding(6),
+                BackColor = Color.White,
+                RenderMode = ToolStripRenderMode.System
+            };
             menu.Items.Add(_autoStartToggleItem);
             menu.Items.Add(_runAtStartupItem);
             menu.Items.Add(_startVpnFirstItem);
             menu.Items.Add(new ToolStripMenuItem("Settings", null, (_, _) => OpenSettings()));
             menu.Items.Add(new ToolStripMenuItem("View log", null, (_, _) => OpenLogViewer()));
             menu.Items.Add(new ToolStripMenuItem("Suggestions / bugs", null, (_, _) =>
-            {
-                try
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = "https://github.com/krassykrastev/FileStarter/issues/new",
-                        UseShellExecute = true
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error("Failed to open Suggestions / bugs link.", ex);
-                    MessageBox.Show(
-                        "Could not open the link.",
-                        "Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
-                }
-            }));
+                AppUiHelpers.TryOpenUrl(null, "https://github.com/krassykrastev/FileStarter/issues/new", "Could not open the link.", "Error")));
             menu.Items.Add(new ToolStripMenuItem("Check for new version", null, (_, _) =>
-            {
-                try
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = "https://github.com/krassykrastev/FileStarter/releases",
-                        UseShellExecute = true
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error("Failed to open Check for new version link.", ex);
-                    MessageBox.Show(
-                        "Could not open the link.",
-                        "Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
-                }
-            }));
+                AppUiHelpers.TryOpenUrl(null, "https://github.com/krassykrastev/FileStarter/releases", "Could not open the link.", "Error")));
             menu.Items.Add(new ToolStripMenuItem("Help", null, (_, _) => OpenHelp()));
             menu.Items.Add(new ToolStripMenuItem("About", null, (_, _) => OpenAbout()));
             menu.Items.Add(new ToolStripSeparator());
@@ -193,7 +153,6 @@ namespace TeamsTrayStarter
                 _singleLeftClickTimer.Start();
                 return;
             }
-
             if (e.Button == MouseButtons.Right)
             {
                 _singleLeftClickTimer.Stop();
@@ -217,12 +176,10 @@ namespace TeamsTrayStarter
             var screen = Screen.FromPoint(cursorPos).WorkingArea;
             int x = cursorPos.X - (menuSize.Width / 2);
             int y = cursorPos.Y;
-
             if (y + menuSize.Height > screen.Bottom)
             {
                 y = cursorPos.Y - menuSize.Height;
             }
-
             x = Math.Max(screen.Left, Math.Min(x, screen.Right - menuSize.Width));
             y = Math.Max(screen.Top, Math.Min(y, screen.Bottom - menuSize.Height));
             var adjustedPos = new Point(x, y);
@@ -237,16 +194,10 @@ namespace TeamsTrayStarter
         {
             try
             {
-                if (!_settings.StartVpnFirstEnabled)
-                    return;
-                if (string.IsNullOrWhiteSpace(_settings.VpnConnectionName))
+                if (!_settings.StartVpnFirstEnabled || string.IsNullOrWhiteSpace(_settings.VpnConnectionName))
                     return;
 
-                await _vpnService.EnsureVpnConnectedAsync(
-                    _settings,
-                    ShowBalloon,
-                    SaveSettings,
-                    allowUserPrompt: false);
+                await _vpnService.EnsureVpnConnectedAsync(_settings, ShowBalloon, SaveSettings, allowUserPrompt: false);
             }
             catch (Exception ex)
             {
@@ -273,6 +224,7 @@ namespace TeamsTrayStarter
         private void UpdateTrayUi()
         {
             SaveIfAutoStartTransitionDue();
+
             bool effectiveAutoStart = SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now);
             _autoStartToggleItem.Checked = effectiveAutoStart;
             _autoStartToggleItem.Text = effectiveAutoStart ? "Auto-start ON" : "Auto-start OFF";
@@ -314,7 +266,6 @@ namespace TeamsTrayStarter
             var next = SettingsManager.GetNextLaunchDateTime(_settings, now);
             bool pausedByDate = SettingsManager.IsAutoStartPausedByDate(_settings, now) && _settings.AutoStartOffUntilEnabled;
             DateTime? nextUpdateTime = null;
-
             if (pausedByDate && _settings.AutoStartOffUntilDate.HasValue)
             {
                 nextUpdateTime = _settings.AutoStartOffUntilDate.Value;
@@ -334,7 +285,6 @@ namespace TeamsTrayStarter
             {
                 interval = 60000;
             }
-
             _tooltipUpdateTimer.Interval = interval;
             _tooltipUpdateTimer.Start();
         }
@@ -365,7 +315,7 @@ namespace TeamsTrayStarter
             }
             catch (Exception ex)
             {
-                Logger.Error("Startup VPN connection crashed.", ex);
+                Logger.Error("Failed to update run-at-startup setting.", ex);
             }
         }
 
@@ -441,7 +391,6 @@ namespace TeamsTrayStarter
             var exePath = Environment.ProcessPath;
             if (string.IsNullOrWhiteSpace(exePath))
                 throw new InvalidOperationException("Cannot determine executable path.");
-
             try
             {
                 CreateStartupTaskWithSchtasks(exePath);
@@ -476,7 +425,6 @@ namespace TeamsTrayStarter
                 taskDeleteEx = ex;
                 Logger.Error("Failed to remove Task Scheduler startup entry for FileStarter.", ex);
             }
-
             try
             {
                 RemoveRegistryRunEntry();
@@ -486,15 +434,12 @@ namespace TeamsTrayStarter
                 registryDeleteEx = ex;
                 Logger.Error("Failed to remove registry startup entry for FileStarter.", ex);
             }
-
             if (taskDeleteEx != null && registryDeleteEx != null)
                 throw new AggregateException(taskDeleteEx, registryDeleteEx);
         }
 
         private static bool IsRunAtStartupEnabled()
-        {
-            return StartupTaskExists() || RegistryStartupExists();
-        }
+            => StartupTaskExists() || RegistryStartupExists();
 
         private static bool StartupTaskExists()
         {
@@ -563,6 +508,7 @@ namespace TeamsTrayStarter
     </Exec>
   </Actions>
 </Task>";
+
             string tempXmlPath = Path.Combine(Path.GetTempPath(), $"{RunValueName}_startup_task.xml");
             try
             {
@@ -596,7 +542,6 @@ namespace TeamsTrayStarter
         {
             if (!StartupTaskExists())
                 return;
-
             var result = RunSchtasks($"/Delete /TN \"{RunValueName}\" /F");
             if (result.ExitCode != 0)
                 throw new InvalidOperationException($"Failed to delete startup task. {result.CombinedOutput}");
@@ -630,7 +575,6 @@ namespace TeamsTrayStarter
                           ?? Registry.CurrentUser.CreateSubKey(RunKeyPath, writable: true);
             if (key == null)
                 throw new InvalidOperationException("Cannot open HKCU Run key.");
-
             key.SetValue(RunValueName, $"\"{exePath}\"", RegistryValueKind.String);
         }
 
@@ -646,7 +590,6 @@ namespace TeamsTrayStarter
             {
                 if (TryActivateExistingForm(_settingsForm))
                     return;
-
                 _settingsForm = new SettingsForm(_settings);
                 _settingsForm.FormClosed += (_, _) => ApplySettingsIfAccepted();
                 ShowOrActivateForm(_settingsForm);
@@ -664,11 +607,10 @@ namespace TeamsTrayStarter
             {
                 if (_settingsForm == null)
                     return;
-
-                if (_settingsForm.Accepted)
+                if (_settingsForm.Accepted && _settingsForm.ResultSettings != null)
                 {
                     var before = SettingsManager.Clone(_settings);
-                    ApplySettingsFromForm(_settingsForm);
+                    _settings = _settingsForm.ResultSettings;
                     SaveIfAutoStartTransitionDue();
                     SettingsManager.Save(_settings);
                     if (SettingsManager.HasSettingsChanges(before, _settings))
@@ -685,43 +627,12 @@ namespace TeamsTrayStarter
             }
         }
 
-        private void ApplySettingsFromForm(SettingsForm form)
-        {
-            _settings.Mon.Enabled = form.MonEnabled;
-            _settings.Mon.Time = form.MonTimeHHmm;
-            _settings.Tue.Enabled = form.TueEnabled;
-            _settings.Tue.Time = form.TueTimeHHmm;
-            _settings.Wed.Enabled = form.WedEnabled;
-            _settings.Wed.Time = form.WedTimeHHmm;
-            _settings.Thu.Enabled = form.ThuEnabled;
-            _settings.Thu.Time = form.ThuTimeHHmm;
-            _settings.Fri.Enabled = form.FriEnabled;
-            _settings.Fri.Time = form.FriTimeHHmm;
-            _settings.Sat.Enabled = form.SatEnabled;
-            _settings.Sat.Time = form.SatTimeHHmm;
-            _settings.Sun.Enabled = form.SunEnabled;
-            _settings.Sun.Time = form.SunTimeHHmm;
-            _settings.AutoStartOffFromEnabled = form.AutoStartOffFromEnabled;
-            _settings.AutoStartOffFromDate = form.AutoStartOffFromDate;
-            _settings.AutoStartOffUntilEnabled = form.AutoStartOffUntilEnabled;
-            _settings.AutoStartOffUntilDate = form.AutoStartOffUntilDate;
-            _settings.File1Enabled = form.File1Enabled;
-            _settings.File1Path = form.File1Path;
-            _settings.File2Enabled = form.File2Enabled;
-            _settings.File2Path = form.File2Path;
-            _settings.File3Enabled = form.File3Enabled;
-            _settings.File3Path = form.File3Path;
-            _settings.File4Enabled = form.File4Enabled;
-            _settings.File4Path = form.File4Path;
-        }
-
         private void OpenLogViewer()
         {
             try
             {
                 if (TryActivateExistingForm(_logViewerForm))
                     return;
-
                 _logViewerForm = new LogViewerForm();
                 _logViewerForm.FormClosed += (_, _) => _logViewerForm = null;
                 ShowOrActivateForm(_logViewerForm);
@@ -739,7 +650,6 @@ namespace TeamsTrayStarter
             {
                 if (TryActivateExistingForm(_helpForm))
                     return;
-
                 _helpForm = new HelpForm();
                 _helpForm.FormClosed += (_, _) => _helpForm = null;
                 ShowOrActivateForm(_helpForm);
@@ -757,7 +667,6 @@ namespace TeamsTrayStarter
             {
                 if (TryActivateExistingForm(_aboutForm))
                     return;
-
                 _aboutForm = new AboutForm();
                 _aboutForm.FormClosed += (_, _) => _aboutForm = null;
                 ShowOrActivateForm(_aboutForm);
@@ -772,7 +681,6 @@ namespace TeamsTrayStarter
         {
             if (form == null || form.IsDisposed)
                 return false;
-
             ShowOrActivateForm(form);
             return true;
         }
@@ -792,7 +700,7 @@ namespace TeamsTrayStarter
         {
             _trayIcon.BalloonTipTitle = title;
             _trayIcon.BalloonTipText = message;
-            _trayIcon.BalloonTipIcon = ToolTipIcon.None;
+            _trayIcon.BalloonTipIcon = icon;
             _trayIcon.ShowBalloonTip(4000);
         }
 
@@ -810,5 +718,138 @@ namespace TeamsTrayStarter
             _currentIcon?.Dispose();
             ExitThread();
         }
+    }
+
+    internal static class AppUiHelpers
+    {
+        public static void TryOpenUrl(IWin32Window? owner, string url, string failureMessage, string failureTitle)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to open URL: {url}", ex);
+                if (owner != null)
+                {
+                    MessageBox.Show(owner, failureMessage, failureTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                else
+                {
+                    MessageBox.Show(failureMessage, failureTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+        }
+
+        public static Bitmap? TryLoadAppIconBitmap()
+        {
+            try
+            {
+                string? exePath = Environment.ProcessPath;
+                if (string.IsNullOrWhiteSpace(exePath))
+                    return null;
+
+                using Icon? appIcon = Icon.ExtractAssociatedIcon(exePath);
+                return appIcon?.ToBitmap();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
+    internal static class TrayIconFactory
+    {
+        private static readonly string? BaseIconPath = ResolveBaseIconPath();
+
+        public static void Initialize()
+        {
+            _ = BaseIconPath;
+        }
+
+        public static Icon CreateAutoStartStateIcon(bool enabled, int renderSize)
+        {
+            renderSize = Math.Clamp(renderSize, 16, 128);
+            using Icon baseIcon = LoadBaseIcon(renderSize);
+            using var bmp = new Bitmap(renderSize, renderSize, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            using var g = Graphics.FromImage(bmp);
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+            g.Clear(Color.Transparent);
+            g.DrawIcon(baseIcon, new Rectangle(-1, -1, renderSize + 4, renderSize + 4));
+            if (!enabled)
+            {
+                DrawBusyBadge(g, renderSize);
+            }
+
+            IntPtr hIcon = bmp.GetHicon();
+            try
+            {
+                using var tempIcon = Icon.FromHandle(hIcon);
+                return (Icon)tempIcon.Clone();
+            }
+            finally
+            {
+                DestroyIcon(hIcon);
+            }
+        }
+
+        private static void DrawBusyBadge(Graphics g, int renderSize)
+        {
+            int diameter = Math.Max(20, ((renderSize * 2) / 3) - 2);
+            int margin = Math.Max(1, renderSize / 20);
+            int x = renderSize - diameter - margin;
+            int y = renderSize - diameter - margin;
+            var badgeRect = new Rectangle(x, y, diameter, diameter);
+            using var fillBrush = new SolidBrush(Color.FromArgb(196, 49, 75));
+            using var borderPen = new Pen(Color.Black, 1f);
+            g.FillEllipse(fillBrush, badgeRect);
+            g.DrawEllipse(borderPen, badgeRect);
+        }
+
+        private static Icon LoadBaseIcon(int renderSize)
+        {
+            if (!string.IsNullOrWhiteSpace(BaseIconPath) && File.Exists(BaseIconPath))
+            {
+                return new Icon(BaseIconPath, new Size(renderSize, renderSize));
+            }
+
+            string? exePath = Environment.ProcessPath;
+            if (!string.IsNullOrWhiteSpace(exePath) && File.Exists(exePath))
+            {
+                Icon? exeIcon = Icon.ExtractAssociatedIcon(exePath);
+                if (exeIcon != null)
+                    return new Icon(exeIcon, new Size(renderSize, renderSize));
+            }
+
+            return new Icon(SystemIcons.Application, new Size(renderSize, renderSize));
+        }
+
+        private static string? ResolveBaseIconPath()
+        {
+            string[] candidatePaths =
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "app.ico"),
+                Path.Combine(Application.StartupPath, "Assets", "app.ico"),
+                Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico")
+            };
+            foreach (string path in candidatePaths)
+            {
+                if (File.Exists(path))
+                    return path;
+            }
+            return null;
+        }
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern bool DestroyIcon(IntPtr handle);
     }
 }

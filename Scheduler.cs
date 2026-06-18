@@ -1,4 +1,3 @@
-
 using System;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -13,7 +12,6 @@ namespace TeamsTrayStarter
         private readonly Action<string, string, ToolTipIcon> _notify;
         private readonly System.Windows.Forms.Timer _timer;
         private bool _launchInProgress;
-        private DateTime? _lastScheduledTime;
 
         public Scheduler(
             TeamsLauncher launcher,
@@ -25,9 +23,8 @@ namespace TeamsTrayStarter
             _getSettings = getSettings;
             _saveSettings = saveSettings;
             _notify = notify;
-
             _timer = new System.Windows.Forms.Timer();
-            _timer.Tick += (_, __) =>
+            _timer.Tick += (_, _) =>
             {
                 _timer.Stop();
                 EvaluateAndAct();
@@ -38,37 +35,31 @@ namespace TeamsTrayStarter
         public void StartOrReschedule()
         {
             _timer.Stop();
+
             var settings = _getSettings();
             ApplyPendingAutoStartTransition(settings);
 
-            if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, DateTime.Now))
+            var now = DateTime.Now;
+            if (!SettingsManager.IsEffectiveAutoStartEnabled(settings, now))
             {
-                ScheduleVacationRecheckIfNeeded(settings);
+                ScheduleVacationRecheckIfNeeded(settings, now);
                 return;
             }
 
-            var next = ComputeNextActionTime(DateTime.Now, settings);
-            
+            var next = SettingsManager.GetNextLaunchDateTime(settings, now);
             if (next.HasValue)
             {
-                if (_lastScheduledTime == next.Value)
-                    return;
-
-                _lastScheduledTime = next.Value;
-                ScheduleTimer(next.Value - DateTime.Now);
+                ScheduleTimer(next.Value - now);
             }
 
-            EvaluateAtStartupIfNeeded();
+            EvaluateAtStartupIfNeeded(settings, now);
         }
 
-        private void EvaluateAtStartupIfNeeded()
+        private void EvaluateAtStartupIfNeeded(AppSettings settings, DateTime now)
         {
-            var settings = _getSettings();
-            ApplyPendingAutoStartTransition(settings);
-
             if (_launchInProgress ||
-                !SettingsManager.IsEffectiveAutoStartEnabled(settings, DateTime.Now) ||
-                !ShouldLaunchNow(settings, DateTime.Now))
+                !SettingsManager.IsEffectiveAutoStartEnabled(settings, now) ||
+                !SettingsManager.ShouldLaunchNow(settings, now))
             {
                 return;
             }
@@ -80,11 +71,11 @@ namespace TeamsTrayStarter
         {
             var settings = _getSettings();
             ApplyPendingAutoStartTransition(settings);
-            var now = DateTime.Now;
 
+            var now = DateTime.Now;
             if (_launchInProgress ||
                 !SettingsManager.IsEffectiveAutoStartEnabled(settings, now) ||
-                !ShouldLaunchNow(settings, now))
+                !SettingsManager.ShouldLaunchNow(settings, now))
             {
                 return;
             }
@@ -118,9 +109,9 @@ namespace TeamsTrayStarter
             }
         }
 
-        private void ScheduleVacationRecheckIfNeeded(AppSettings settings)
+        private void ScheduleVacationRecheckIfNeeded(AppSettings settings, DateTime now)
         {
-            if (!SettingsManager.IsAutoStartPausedByDate(settings, DateTime.Now) ||
+            if (!SettingsManager.IsAutoStartPausedByDate(settings, now) ||
                 !settings.AutoStartOffUntilEnabled ||
                 settings.AutoStartOffUntilDate == null)
             {
@@ -128,7 +119,7 @@ namespace TeamsTrayStarter
             }
 
             var nextRecheck = settings.AutoStartOffUntilDate.Value.Date.AddDays(1);
-            ScheduleTimer(nextRecheck - DateTime.Now);
+            ScheduleTimer(nextRecheck - now);
         }
 
         private void ScheduleTimer(TimeSpan due)
@@ -139,33 +130,6 @@ namespace TeamsTrayStarter
             int ms = (int)Math.Min(due.TotalMilliseconds, int.MaxValue);
             _timer.Interval = Math.Max(1, ms);
             _timer.Start();
-        }
-
-        private static bool ShouldLaunchNow(AppSettings settings, DateTime now)
-        {
-            var todaySetting = SettingsManager.GetDaySetting(settings, now.DayOfWeek);
-            if (!todaySetting.Enabled)
-                return false;
-
-            var todayLaunch = now.Date.Add(SettingsManager.GetDayLaunchTimeOrDefault(settings, now.DayOfWeek));
-            return now >= todayLaunch;
-        }
-
-        private static DateTime? ComputeNextActionTime(DateTime now, AppSettings settings)
-        {
-            for (int offset = 0; offset < 8; offset++)
-            {
-                var date = now.Date.AddDays(offset);
-                var daySetting = SettingsManager.GetDaySetting(settings, date.DayOfWeek);
-                if (!daySetting.Enabled)
-                    continue;
-
-                var candidate = date.Add(SettingsManager.GetDayLaunchTimeOrDefault(settings, date.DayOfWeek));
-                if (candidate > now)
-                    return candidate;
-            }
-
-            return null;
         }
 
         public void Dispose()

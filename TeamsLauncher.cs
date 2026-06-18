@@ -1,11 +1,11 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Collections.Concurrent;
 
 namespace TeamsTrayStarter
 {
@@ -17,10 +17,7 @@ namespace TeamsTrayStarter
         private const int InterAppLaunchDelayMs = 10000;
 
         private readonly VpnService _vpnService = new();
-        
-        private static readonly ConcurrentDictionary<string, (bool Result, DateTime Time)> _runCache =
-            new(StringComparer.OrdinalIgnoreCase);
-
+        private static readonly ConcurrentDictionary<string, (bool Result, DateTime Time)> RunCache = new(StringComparer.OrdinalIgnoreCase);
         private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(1);
 
         private readonly struct LaunchAttemptResult
@@ -66,7 +63,7 @@ namespace TeamsTrayStarter
             await TryLaunchEnabledSlotAsync(settings.File3Enabled, settings.File3Path, SlotKind.CustomOnly, 3, launchedNames, failedNames, settings.File4Enabled);
             await TryLaunchEnabledSlotAsync(settings.File4Enabled, settings.File4Path, SlotKind.CustomOnly, 4, launchedNames, failedNames, false);
 
-            NotifyOutcome(launchedNames, failedNames, notify);
+            NotifyOutcome(failedNames, notify);
             return launchedNames.Count > 0;
         }
 
@@ -94,7 +91,6 @@ namespace TeamsTrayStarter
 
             var result = await TryLaunchSlotWithRetryAsync(path, kind);
             string displayName = SettingsManager.GetSlotDisplayName(slotIndex, path, 100);
-
             if (result.Launched)
                 launchedNames.Add(displayName);
             else if (result.Failed)
@@ -104,17 +100,15 @@ namespace TeamsTrayStarter
                 await Task.Delay(InterAppLaunchDelayMs);
         }
 
-        private static void NotifyOutcome(List<string> launchedNames, List<string> failedNames, Action<string, string, ToolTipIcon> notify)
+        private static void NotifyOutcome(List<string> failedNames, Action<string, string, ToolTipIcon> notify)
         {
-            if (failedNames.Count > 0)
-            {
-                string failMsg = failedNames.Count == 1
-                    ? $"{failedNames[0]} failed to launch."
-                    : $"{failedNames.Count} files failed to launch.";
-
-                notify("FileStarter", failMsg, ToolTipIcon.Error);
+            if (failedNames.Count == 0)
                 return;
-            }
+
+            string failMsg = failedNames.Count == 1
+                ? $"{failedNames[0]} failed to launch."
+                : $"{failedNames.Count} files failed to launch.";
+            notify("FileStarter", failMsg, ToolTipIcon.Error);
         }
 
         private async Task<LaunchAttemptResult> TryLaunchSlotWithRetryAsync(string? customPath, SlotKind kind)
@@ -124,14 +118,8 @@ namespace TeamsTrayStarter
 
             return kind switch
             {
-                SlotKind.TeamsDefault => await TryLaunchDefaultAppWithRetryAsync(
-                    "Teams",
-                    IsTeamsRunning,
-                    GetTeamsLaunchTargets()),
-                SlotKind.OutlookDefault => await TryLaunchDefaultAppWithRetryAsync(
-                    "Outlook",
-                    IsOutlookRunning,
-                    GetOutlookLaunchTargets()),
+                SlotKind.TeamsDefault => await TryLaunchDefaultAppWithRetryAsync("Teams", IsTeamsRunning, GetTeamsLaunchTargets()),
+                SlotKind.OutlookDefault => await TryLaunchDefaultAppWithRetryAsync("Outlook", IsOutlookRunning, GetOutlookLaunchTargets()),
                 _ => new LaunchAttemptResult(false, false)
             };
         }
@@ -147,7 +135,6 @@ namespace TeamsTrayStarter
                 }
 
                 bool isExe = string.Equals(Path.GetExtension(targetPath), ".exe", StringComparison.OrdinalIgnoreCase);
-
                 for (int attempt = 1; attempt <= MaxLaunchAttempts; attempt++)
                 {
                     if (isExe && IsExecutableRunning(targetPath))
@@ -165,7 +152,6 @@ namespace TeamsTrayStarter
                             return new LaunchAttemptResult(true, false);
 
                         await Task.Delay(PostLaunchVerifyDelayMs);
-
                         if (IsExecutableRunning(targetPath))
                             return new LaunchAttemptResult(true, false);
 
@@ -196,7 +182,6 @@ namespace TeamsTrayStarter
             IEnumerable<string> launchTargets)
         {
             Exception? lastEx = null;
-
             for (int attempt = 1; attempt <= MaxLaunchAttempts; attempt++)
             {
                 if (isRunning())
@@ -205,10 +190,8 @@ namespace TeamsTrayStarter
                 if (TryStartFirstAvailableTarget(launchTargets, out lastEx))
                 {
                     await Task.Delay(PostLaunchVerifyDelayMs);
-
                     if (isRunning())
                         return new LaunchAttemptResult(true, false);
-
                     Logger.Warn($"TryLaunchDefault{appDisplayName}: {appDisplayName} not detected after launch.");
                 }
 
@@ -223,7 +206,6 @@ namespace TeamsTrayStarter
         private static bool TryStartFirstAvailableTarget(IEnumerable<string> targets, out Exception? lastEx)
         {
             lastEx = null;
-
             foreach (var target in targets)
             {
                 try
@@ -233,7 +215,6 @@ namespace TeamsTrayStarter
                         FileName = target,
                         UseShellExecute = true
                     });
-
                     return true;
                 }
                 catch (Exception ex)
@@ -242,7 +223,6 @@ namespace TeamsTrayStarter
                     Logger.Warn($"TryStartTarget: failed target {target} => {ex.Message}");
                 }
             }
-
             return false;
         }
 
@@ -250,14 +230,11 @@ namespace TeamsTrayStarter
         {
             yield return "msteams:";
             yield return "ms-teams:";
-
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-
             string newTeamsAlias = Path.Combine(localAppData, "Microsoft", "WindowsApps", "ms-teams.exe");
             string classicPerUser = Path.Combine(localAppData, "Microsoft", "Teams", "current", "Teams.exe");
             string classicMachine = Path.Combine(programFilesX86, "Microsoft", "Teams", "current", "Teams.exe");
-
             if (File.Exists(newTeamsAlias)) yield return newTeamsAlias;
             if (File.Exists(classicPerUser)) yield return classicPerUser;
             if (File.Exists(classicMachine)) yield return classicMachine;
@@ -268,19 +245,15 @@ namespace TeamsTrayStarter
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
             string programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-
             string newOutlookAlias = Path.Combine(localAppData, "Microsoft", "WindowsApps", "olk.exe");
             string office16x64 = Path.Combine(programFiles, "Microsoft Office", "root", "Office16", "OUTLOOK.EXE");
             string office16x86 = Path.Combine(programFilesX86, "Microsoft Office", "root", "Office16", "OUTLOOK.EXE");
-
             string? runningPath = null;
-
             try
             {
                 var running = Process.GetProcesses()
                     .FirstOrDefault(p => string.Equals((p.ProcessName ?? string.Empty).Trim(), "OUTLOOK", StringComparison.OrdinalIgnoreCase) ||
                                          string.Equals((p.ProcessName ?? string.Empty).Trim(), "olk", StringComparison.OrdinalIgnoreCase));
-
                 if (running != null)
                     runningPath = TryGetProcessPath(running);
             }
@@ -294,11 +267,9 @@ namespace TeamsTrayStarter
                 yield return runningPath;
                 yield break;
             }
-
             if (File.Exists(office16x64)) yield return office16x64;
             if (File.Exists(office16x86)) yield return office16x86;
             if (File.Exists(newOutlookAlias)) yield return newOutlookAlias;
-
             yield return "outlook.exe";
             yield return "outlook:";
         }
@@ -333,7 +304,6 @@ namespace TeamsTrayStarter
         {
             var wanted = new HashSet<string>(processNames, StringComparer.OrdinalIgnoreCase);
             int currentPid = Process.GetCurrentProcess().Id;
-
             foreach (var process in Process.GetProcesses())
             {
                 try
@@ -345,7 +315,6 @@ namespace TeamsTrayStarter
                 {
                 }
             }
-
             return false;
         }
 
@@ -353,16 +322,12 @@ namespace TeamsTrayStarter
         {
             try
             {
-                if (_runCache.TryGetValue(fullPath, out var cached))
-                {
-                    if (DateTime.Now - cached.Time < CacheTtl)
-                        return cached.Result;
-                }
+                if (RunCache.TryGetValue(fullPath, out var cached) && DateTime.Now - cached.Time < CacheTtl)
+                    return cached.Result;
 
                 string wantedName = Path.GetFileNameWithoutExtension(fullPath).ToLowerInvariant();
                 bool result = Process.GetProcessesByName(wantedName).Length > 0;
-
-                _runCache[fullPath] = (result, DateTime.Now);
+                RunCache[fullPath] = (result, DateTime.Now);
                 return result;
             }
             catch (Exception ex)
@@ -382,13 +347,6 @@ namespace TeamsTrayStarter
             {
                 return null;
             }
-        }
-
-        private static string NormalizePath(string path)
-        {
-            return Path.GetFullPath(path)
-                .Trim()
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
     }
 }

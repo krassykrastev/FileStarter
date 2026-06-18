@@ -119,6 +119,16 @@ namespace TeamsTrayStarter
             return null;
         }
 
+        public static bool ShouldLaunchNow(AppSettings settings, DateTime nowLocal)
+        {
+            var todaySetting = GetDaySetting(settings, nowLocal.DayOfWeek);
+            if (!todaySetting.Enabled)
+                return false;
+
+            var todayLaunch = nowLocal.Date.Add(GetDayLaunchTimeOrDefault(settings, nowLocal.DayOfWeek));
+            return nowLocal >= todayLaunch;
+        }
+
         public static string ShortenDisplayName(string text, int maxLength = 12)
         {
             if (string.IsNullOrWhiteSpace(text))

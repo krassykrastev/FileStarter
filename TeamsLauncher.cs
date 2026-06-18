@@ -39,6 +39,8 @@ namespace TeamsTrayStarter
             CustomOnly
         }
 
+        private readonly record struct SlotDescriptor(bool Enabled, string? Path, SlotKind Kind, int SlotIndex);
+
         public async Task<bool> TryLaunchTargetsWithRetryAsync(
             bool force,
             AppSettings settings,
@@ -76,23 +78,18 @@ namespace TeamsTrayStarter
             return launchedNames.Count > 0;
         }
 
-        public bool TryLaunchTeams(
-            bool force,
-            AppSettings settings,
-            Action<string, string, ToolTipIcon> notify,
-            Action<AppSettings>? saveSettings = null)
-            => TryLaunchTargetsWithRetryAsync(force, settings, notify, saveSettings).GetAwaiter().GetResult();
-
-        public static List<string> GetAvailableVpnConnectionNames()
-            => VpnService.GetAvailableVpnConnectionNames();
-
-        private async Task TryLaunchEnabledSlotAsync(SlotDescriptor slot, List<string> launchedNames, List<string> failedNames, bool delayAfter)
+        private async Task TryLaunchEnabledSlotAsync(
+            SlotDescriptor slot,
+            List<string> launchedNames,
+            List<string> failedNames,
+            bool delayAfter)
         {
             if (!slot.Enabled)
                 return;
 
             var result = await TryLaunchSlotWithRetryAsync(slot.Path, slot.Kind);
             string displayName = SettingsManager.GetSlotDisplayName(slot.SlotIndex, slot.Path, 100);
+
             if (result.Launched)
                 launchedNames.Add(displayName);
             else if (result.Failed)
@@ -110,6 +107,7 @@ namespace TeamsTrayStarter
             string failMsg = failedNames.Count == 1
                 ? $"{failedNames[0]} failed to launch."
                 : $"{failedNames.Count} files failed to launch.";
+
             notify("FileStarter", failMsg, ToolTipIcon.Error);
         }
 
@@ -184,6 +182,7 @@ namespace TeamsTrayStarter
             IEnumerable<string> launchTargets)
         {
             Exception? lastEx = null;
+
             for (int attempt = 1; attempt <= MaxLaunchAttempts; attempt++)
             {
                 if (isRunning())
@@ -209,6 +208,7 @@ namespace TeamsTrayStarter
         private static bool TryStartFirstAvailableTarget(IEnumerable<string> targets, out Exception? lastEx)
         {
             lastEx = null;
+
             foreach (var target in targets)
             {
                 try
@@ -226,6 +226,7 @@ namespace TeamsTrayStarter
                     Logger.Other($"TryStartTarget: failed target {target} => {ex.Message}");
                 }
             }
+
             return false;
         }
 
@@ -258,8 +259,10 @@ namespace TeamsTrayStarter
             try
             {
                 var running = Process.GetProcesses()
-                    .FirstOrDefault(p => string.Equals((p.ProcessName ?? string.Empty).Trim(), "OUTLOOK", StringComparison.OrdinalIgnoreCase) ||
-                                         string.Equals((p.ProcessName ?? string.Empty).Trim(), "olk", StringComparison.OrdinalIgnoreCase));
+                    .FirstOrDefault(p =>
+                        string.Equals((p.ProcessName ?? string.Empty).Trim(), "OUTLOOK", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals((p.ProcessName ?? string.Empty).Trim(), "olk", StringComparison.OrdinalIgnoreCase));
+
                 if (running != null)
                     runningPath = TryGetProcessPath(running);
             }
@@ -311,6 +314,7 @@ namespace TeamsTrayStarter
         {
             var wanted = new HashSet<string>(processNames, StringComparer.OrdinalIgnoreCase);
             int currentPid = Process.GetCurrentProcess().Id;
+
             foreach (var process in Process.GetProcesses())
             {
                 try
@@ -322,6 +326,7 @@ namespace TeamsTrayStarter
                 {
                 }
             }
+
             return false;
         }
 
@@ -355,7 +360,5 @@ namespace TeamsTrayStarter
                 return null;
             }
         }
-
-        private readonly record struct SlotDescriptor(bool Enabled, string? Path, SlotKind Kind, int SlotIndex);
     }
 }

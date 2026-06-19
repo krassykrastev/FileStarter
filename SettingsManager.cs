@@ -78,6 +78,7 @@ namespace TeamsTrayStarter
         public static DateTime? GetNextLaunchDateTime(AppSettings settings, DateTime nowLocal)
         {
             DateTime searchStart = nowLocal;
+
             if (IsAutoStartPausedByDate(settings, nowLocal) &&
                 settings.AutoStartOffUntilEnabled &&
                 settings.AutoStartOffUntilDate != null)
@@ -89,16 +90,23 @@ namespace TeamsTrayStarter
             {
                 var date = searchStart.Date.AddDays(offset);
                 var daySetting = GetDaySetting(settings, date.DayOfWeek);
+
                 if (!daySetting.Enabled)
                     continue;
 
                 var candidate = date.Add(GetDayLaunchTimeOrDefault(settings, date.DayOfWeek));
+
                 if (candidate.Date > nowLocal.Date)
                     return candidate;
+
                 if (candidate >= nowLocal)
                     return candidate;
-                if (candidate.Date == nowLocal.Date && nowLocal - candidate <= LaunchGracePeriod)
+
+                if (candidate.Date == nowLocal.Date &&
+                    nowLocal - candidate <= LaunchGracePeriod)
+                {
                     return candidate;
+                }
             }
 
             return null;
@@ -111,15 +119,18 @@ namespace TeamsTrayStarter
                 return false;
 
             var todayLaunch = nowLocal.Date.Add(GetDayLaunchTimeOrDefault(settings, nowLocal.DayOfWeek));
-            return nowLocal >= todayLaunch;
+            return nowLocal >= todayLaunch &&
+                   nowLocal - todayLaunch <= LaunchGracePeriod;
         }
 
         public static string ShortenDisplayName(string text, int maxLength = 12)
         {
             if (string.IsNullOrWhiteSpace(text))
                 return text;
+
             if (maxLength <= 3)
                 return text.Length <= maxLength ? text : text.Substring(0, maxLength);
+
             return text.Length <= maxLength ? text : text.Substring(0, maxLength - 3) + "...";
         }
 
@@ -164,6 +175,7 @@ namespace TeamsTrayStarter
 
             DateTime today = nowLocal.Date;
             DateTime start = settings.AutoStartOffFromDate.Value.Date;
+
             if (today < start)
                 return false;
 
@@ -347,6 +359,7 @@ namespace TeamsTrayStarter
                     changes.Add($"{label} path changed to default (MS Outlook)");
                 else
                     changes.Add($"{label} path cleared");
+
                 return;
             }
 
@@ -364,19 +377,6 @@ namespace TeamsTrayStarter
                 DayOfWeek.Saturday => "Saturday",
                 DayOfWeek.Sunday => "Sunday",
                 _ => dayOfWeek.ToString()
-            };
-
-        private static string GetDayPluralDisplayName(DayOfWeek dayOfWeek)
-            => dayOfWeek switch
-            {
-                DayOfWeek.Monday => "Mondays",
-                DayOfWeek.Tuesday => "Tuesdays",
-                DayOfWeek.Wednesday => "Wednesdays",
-                DayOfWeek.Thursday => "Thursdays",
-                DayOfWeek.Friday => "Fridays",
-                DayOfWeek.Saturday => "Saturdays",
-                DayOfWeek.Sunday => "Sundays",
-                _ => GetDayDisplayName(dayOfWeek)
             };
 
         private static string NormalizeDayTime(string? value)

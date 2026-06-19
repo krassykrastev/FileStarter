@@ -419,16 +419,12 @@ namespace TeamsTrayStarter
             {
                 if (row.SlotIndex >= 3 && row.CheckBox.Checked && string.IsNullOrWhiteSpace(row.Path))
                 {
-                    string slotLabel = SettingsManager.GetSlotLabel(row.SlotIndex);
-                    MessageBox.Show(
-                        this,
-                        $"{slotLabel} is selected, but no file has been chosen. Please browse for a file or uncheck {slotLabel}.",
-                        $"Missing {slotLabel}",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                    return;
+                    row.CheckBox.Checked = false;
+                    UpdateFileRowEnabledState(row);
                 }
             }
+
+            UpdateFileActionButtonStates();
 
             foreach (var row in _fileRows)
             {

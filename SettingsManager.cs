@@ -9,7 +9,6 @@ namespace TeamsTrayStarter
     {
         private static readonly string[] SlotLabels = { "File 1", "File 2", "File 3", "File 4" };
         private static readonly string[] SlotDefaultTexts = { "MS Teams", "MS Outlook", "not yet selected", "not yet selected" };
-
         private static readonly TimeSpan LaunchGracePeriod = TimeSpan.FromMinutes(1);
 
         public static string AppDataFolder =>
@@ -64,7 +63,6 @@ namespace TeamsTrayStarter
         public static TimeSpan GetDayLaunchTimeOrDefault(AppSettings settings, DayOfWeek day)
         {
             var daySetting = GetDaySetting(settings, day);
-
             if (!string.IsNullOrWhiteSpace(daySetting.Time) &&
                 TimeSpan.TryParse(daySetting.Time, out var time) &&
                 time >= TimeSpan.Zero &&
@@ -80,7 +78,6 @@ namespace TeamsTrayStarter
         public static DateTime? GetNextLaunchDateTime(AppSettings settings, DateTime nowLocal)
         {
             DateTime searchStart = nowLocal;
-
             if (IsAutoStartPausedByDate(settings, nowLocal) &&
                 settings.AutoStartOffUntilEnabled &&
                 settings.AutoStartOffUntilDate != null)
@@ -92,23 +89,16 @@ namespace TeamsTrayStarter
             {
                 var date = searchStart.Date.AddDays(offset);
                 var daySetting = GetDaySetting(settings, date.DayOfWeek);
-
                 if (!daySetting.Enabled)
                     continue;
 
                 var candidate = date.Add(GetDayLaunchTimeOrDefault(settings, date.DayOfWeek));
-
                 if (candidate.Date > nowLocal.Date)
                     return candidate;
-
                 if (candidate >= nowLocal)
                     return candidate;
-
-                if (candidate.Date == nowLocal.Date &&
-                    nowLocal - candidate <= LaunchGracePeriod)
-                {
+                if (candidate.Date == nowLocal.Date && nowLocal - candidate <= LaunchGracePeriod)
                     return candidate;
-                }
             }
 
             return null;
@@ -273,26 +263,26 @@ namespace TeamsTrayStarter
         {
             var changes = new List<string>();
 
-            AddChange(changes, "Run at Windows startup", before.RunAppAtStartup, after.RunAppAtStartup);
-            AddChange(changes, "Start VPN first", before.StartVpnFirstEnabled, after.StartVpnFirstEnabled);
-            AddChange(changes, "VPN connection name", before.VpnConnectionName, after.VpnConnectionName);
-            AddChange(changes, "Monday", before.Mon, after.Mon);
-            AddChange(changes, "Tuesday", before.Tue, after.Tue);
-            AddChange(changes, "Wednesday", before.Wed, after.Wed);
-            AddChange(changes, "Thursday", before.Thu, after.Thu);
-            AddChange(changes, "Friday", before.Fri, after.Fri);
-            AddChange(changes, "Saturday", before.Sat, after.Sat);
-            AddChange(changes, "Sunday", before.Sun, after.Sun);
-            AddChange(changes, "Turn auto-start OFF from this date", before.AutoStartOffFromDate, after.AutoStartOffFromDate);
-            AddChange(changes, "Turn auto-start OFF until this date", before.AutoStartOffUntilDate, after.AutoStartOffUntilDate);
-            AddChange(changes, "File 1 enabled", before.File1Enabled, after.File1Enabled);
-            AddChange(changes, "File 1 path", before.File1Path, after.File1Path);
-            AddChange(changes, "File 2 enabled", before.File2Enabled, after.File2Enabled);
-            AddChange(changes, "File 2 path", before.File2Path, after.File2Path);
-            AddChange(changes, "File 3 enabled", before.File3Enabled, after.File3Enabled);
-            AddChange(changes, "File 3 path", before.File3Path, after.File3Path);
-            AddChange(changes, "File 4 enabled", before.File4Enabled, after.File4Enabled);
-            AddChange(changes, "File 4 path", before.File4Path, after.File4Path);
+            AddEnableDisableChange(changes, "Run on Windows startup", before.RunAppAtStartup, after.RunAppAtStartup);
+            AddEnableDisableChange(changes, "Start VPN first", before.StartVpnFirstEnabled, after.StartVpnFirstEnabled);
+            AddPathChange(changes, 1, before.File1Path, after.File1Path);
+            AddPathChange(changes, 2, before.File2Path, after.File2Path);
+            AddPathChange(changes, 3, before.File3Path, after.File3Path);
+            AddPathChange(changes, 4, before.File4Path, after.File4Path);
+            AddEnableDisableChange(changes, "File 1", before.File1Enabled, after.File1Enabled);
+            AddEnableDisableChange(changes, "File 2", before.File2Enabled, after.File2Enabled);
+            AddEnableDisableChange(changes, "File 3", before.File3Enabled, after.File3Enabled);
+            AddEnableDisableChange(changes, "File 4", before.File4Enabled, after.File4Enabled);
+            AddVacationDateChange(changes, "Auto-start disabled from", before.AutoStartOffFromDate, after.AutoStartOffFromDate);
+            AddVacationDateChange(changes, "Auto-start disabled until", before.AutoStartOffUntilDate, after.AutoStartOffUntilDate);
+            AddDayChange(changes, DayOfWeek.Monday, before.Mon, after.Mon);
+            AddDayChange(changes, DayOfWeek.Tuesday, before.Tue, after.Tue);
+            AddDayChange(changes, DayOfWeek.Wednesday, before.Wed, after.Wed);
+            AddDayChange(changes, DayOfWeek.Thursday, before.Thu, after.Thu);
+            AddDayChange(changes, DayOfWeek.Friday, before.Fri, after.Fri);
+            AddDayChange(changes, DayOfWeek.Saturday, before.Sat, after.Sat);
+            AddDayChange(changes, DayOfWeek.Sunday, before.Sun, after.Sun);
+            AddStringChange(changes, "VPN connection name", before.VpnConnectionName, after.VpnConnectionName);
 
             foreach (var change in changes)
             {
@@ -309,34 +299,92 @@ namespace TeamsTrayStarter
         private static bool StringEqualsForSettings(string? before, string? after)
             => string.Equals(NormalizeDisplay(before), NormalizeDisplay(after), StringComparison.OrdinalIgnoreCase);
 
-        private static void AddChange(List<string> changes, string label, bool before, bool after)
+        private static void AddEnableDisableChange(List<string> changes, string label, bool before, bool after)
         {
-            if (before != after)
-                changes.Add($"{label}: {before} -> {after}");
+            if (before == after)
+                return;
+
+            changes.Add($"{label} {(after ? "enabled" : "disabled")}");
         }
 
-        private static void AddChange(List<string> changes, string label, string? before, string? after)
+        private static void AddStringChange(List<string> changes, string label, string? before, string? after)
         {
             string normalizedBefore = NormalizeDisplay(before);
             string normalizedAfter = NormalizeDisplay(after);
             if (!string.Equals(normalizedBefore, normalizedAfter, StringComparison.OrdinalIgnoreCase))
-                changes.Add($"{label}: {normalizedBefore} -> {normalizedAfter}");
+                changes.Add($"{label} changed to {normalizedAfter}");
         }
 
-        private static void AddChange(List<string> changes, string label, DateTime? before, DateTime? after)
+        private static void AddVacationDateChange(List<string> changes, string label, DateTime? before, DateTime? after)
         {
-            string normalizedBefore = before?.ToString("yyyy-MM-dd") ?? "<none>";
-            string normalizedAfter = after?.ToString("yyyy-MM-dd") ?? "<none>";
-            if (!string.Equals(normalizedBefore, normalizedAfter, StringComparison.OrdinalIgnoreCase))
-                changes.Add($"{label}: {normalizedBefore} -> {normalizedAfter}");
+            if (before?.Date == after?.Date || after == null)
+                return;
+
+            changes.Add($"{label}: {after:yyyy-MM-dd}");
         }
 
-        private static void AddChange(List<string> changes, string label, DayLaunchSetting before, DayLaunchSetting after)
+        private static void AddDayChange(List<string> changes, DayOfWeek dayOfWeek, DayLaunchSetting before, DayLaunchSetting after)
         {
-            if (HasDayChange(before, after))
+            if (!HasDayChange(before, after))
+                return;
+
+            string dayName = GetDayDisplayName(dayOfWeek);
+            string timeText = NormalizeDayTime(after.Time);
+            changes.Add($"{dayName} start at {timeText} {(after.Enabled ? "enabled" : "disabled")}");
+        }
+
+        private static void AddPathChange(List<string> changes, int fileIndex, string? before, string? after)
+        {
+            if (StringEqualsForSettings(before, after))
+                return;
+
+            string label = GetSlotLabel(fileIndex);
+            if (string.IsNullOrWhiteSpace(after))
             {
-                changes.Add($"{label}: Enabled={before.Enabled}, Time={NormalizeDisplay(before.Time)} -> Enabled={after.Enabled}, Time={NormalizeDisplay(after.Time)}");
+                if (fileIndex == 1)
+                    changes.Add($"{label} path changed to default (MS Teams)");
+                else if (fileIndex == 2)
+                    changes.Add($"{label} path changed to default (MS Outlook)");
+                else
+                    changes.Add($"{label} path cleared");
+                return;
             }
+
+            changes.Add($"{label} path changed to {after.Trim()}");
+        }
+
+        private static string GetDayDisplayName(DayOfWeek dayOfWeek)
+            => dayOfWeek switch
+            {
+                DayOfWeek.Monday => "Monday",
+                DayOfWeek.Tuesday => "Tuesday",
+                DayOfWeek.Wednesday => "Wednesday",
+                DayOfWeek.Thursday => "Thursday",
+                DayOfWeek.Friday => "Friday",
+                DayOfWeek.Saturday => "Saturday",
+                DayOfWeek.Sunday => "Sunday",
+                _ => dayOfWeek.ToString()
+            };
+
+        private static string GetDayPluralDisplayName(DayOfWeek dayOfWeek)
+            => dayOfWeek switch
+            {
+                DayOfWeek.Monday => "Mondays",
+                DayOfWeek.Tuesday => "Tuesdays",
+                DayOfWeek.Wednesday => "Wednesdays",
+                DayOfWeek.Thursday => "Thursdays",
+                DayOfWeek.Friday => "Fridays",
+                DayOfWeek.Saturday => "Saturdays",
+                DayOfWeek.Sunday => "Sundays",
+                _ => GetDayDisplayName(dayOfWeek)
+            };
+
+        private static string NormalizeDayTime(string? value)
+        {
+            if (!string.IsNullOrWhiteSpace(value) && TimeSpan.TryParse(value, out var time))
+                return time.ToString(@"hh\:mm");
+
+            return NormalizeDisplay(value);
         }
 
         private static string NormalizeDisplay(string? value)

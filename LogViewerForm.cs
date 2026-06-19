@@ -382,30 +382,50 @@ namespace TeamsTrayStarter
             int index = 0;
             while (index < message.Length)
             {
-                int nextOn = message.IndexOf("ON", index, StringComparison.Ordinal);
-                int nextOff = message.IndexOf("OFF", index, StringComparison.Ordinal);
-                if (nextOn < 0 && nextOff < 0)
+                var nextToken = FindNextHighlightToken(message, index);
+                if (nextToken == null)
                 {
                     _logRichTextBox.SelectionColor = defaultColor;
                     _logRichTextBox.AppendText(message[index..]);
                     break;
                 }
 
-                bool useOn = nextOn >= 0 && (nextOff < 0 || nextOn < nextOff);
-                int tokenIndex = useOn ? nextOn : nextOff;
-                string token = useOn ? "ON" : "OFF";
-                Color tokenColor = useOn ? Color.FromArgb(22, 101, 52) : Color.Crimson;
-
-                if (tokenIndex > index)
+                if (nextToken.Value.Index > index)
                 {
                     _logRichTextBox.SelectionColor = defaultColor;
-                    _logRichTextBox.AppendText(message.Substring(index, tokenIndex - index));
+                    _logRichTextBox.AppendText(message.Substring(index, nextToken.Value.Index - index));
                 }
 
-                _logRichTextBox.SelectionColor = tokenColor;
-                _logRichTextBox.AppendText(token);
-                index = tokenIndex + token.Length;
+                _logRichTextBox.SelectionColor = nextToken.Value.Color;
+                _logRichTextBox.AppendText(nextToken.Value.Token);
+                index = nextToken.Value.Index + nextToken.Value.Token.Length;
             }
+        }
+
+        private static (int Index, string Token, Color Color)? FindNextHighlightToken(string message, int startIndex)
+        {
+            (string Token, Color Color)[] highlightTokens =
+            {
+                ("enabled", Color.FromArgb(22, 101, 52)),
+                ("disabled", Color.Crimson)
+            };
+
+            int bestIndex = -1;
+            string bestToken = string.Empty;
+            Color bestColor = Color.Empty;
+
+            foreach (var (token, color) in highlightTokens)
+            {
+                int foundIndex = message.IndexOf(token, startIndex, StringComparison.OrdinalIgnoreCase);
+                if (foundIndex >= 0 && (bestIndex < 0 || foundIndex < bestIndex))
+                {
+                    bestIndex = foundIndex;
+                    bestToken = message.Substring(foundIndex, token.Length);
+                    bestColor = color;
+                }
+            }
+
+            return bestIndex >= 0 ? (bestIndex, bestToken, bestColor) : null;
         }
 
         private bool ShouldShow(LogEntryKind kind)

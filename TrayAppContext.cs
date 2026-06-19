@@ -52,7 +52,7 @@ namespace TeamsTrayStarter
 
             _scheduler = new Scheduler(new TeamsLauncher(), () => _settings, SaveSettings, ShowBalloon);
             _autoStartToggleItem = CreateMenuItem(
-                "Auto-start ON",
+                "Auto-start enabled",
                 SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now),
                 ToggleAutoStartMaster);
             _runAtStartupItem = CreateMenuItem(
@@ -220,7 +220,7 @@ namespace TeamsTrayStarter
             SaveIfAutoStartTransitionDue();
             bool effectiveAutoStart = SettingsManager.IsEffectiveAutoStartEnabled(_settings, DateTime.Now);
             _autoStartToggleItem.Checked = effectiveAutoStart;
-            _autoStartToggleItem.Text = effectiveAutoStart ? "Auto-start ON" : "Auto-start OFF";
+            _autoStartToggleItem.Text = effectiveAutoStart ? "Auto-start enabled" : "Auto-start disabled";
             _runAtStartupItem.Checked = IsRunAtStartupEnabled();
             _startVpnFirstItem.Checked = _settings.StartVpnFirstEnabled;
 
@@ -237,16 +237,16 @@ namespace TeamsTrayStarter
             if (pausedByDate && _settings.AutoStartOffUntilDate.HasValue)
             {
                 string untilStr = _settings.AutoStartOffUntilDate.Value.ToString("dd/MM HH:mm");
-                _trayIcon.Text = "Auto-start OFF until " + untilStr;
+                _trayIcon.Text = "Auto-start disabled until " + untilStr;
             }
             else if (next.HasValue && effectiveAutoStart)
             {
                 string nextStr = next.Value.ToString("dd/MM HH:mm");
-                _trayIcon.Text = "Auto-start ON, next " + nextStr;
+                _trayIcon.Text = "Auto-start enabled, next " + nextStr;
             }
             else
             {
-                _trayIcon.Text = effectiveAutoStart ? "Auto-start ON" : "Auto-start OFF";
+                _trayIcon.Text = effectiveAutoStart ? "Auto-start enabled" : "Auto-start disabled";
             }
             ScheduleNextTooltipUpdate();
         }
@@ -285,7 +285,7 @@ namespace TeamsTrayStarter
         {
             _settings.AutoStartTeamsEnabled = !_settings.AutoStartTeamsEnabled;
             SettingsManager.Save(_settings);
-            Logger.Change(_settings.AutoStartTeamsEnabled ? "Auto-start turned ON" : "Auto-start turned OFF");
+            Logger.Change(_settings.AutoStartTeamsEnabled ? "Auto-start enabled" : "Auto-start disabled");
             UpdateTrayUi();
             _scheduler.StartOrReschedule();
         }
@@ -300,7 +300,7 @@ namespace TeamsTrayStarter
                     EnableRunAtLogin();
                 else
                     DisableRunAtLogin();
-                Logger.Change(enable ? "Run on Windows startup turned ON" : "Run on Windows startup turned OFF");
+                Logger.Change(enable ? "Run on Windows startup enabled" : "Run on Windows startup disabled");
                 SettingsManager.Save(_settings);
                 UpdateTrayUi();
             }
@@ -341,14 +341,14 @@ namespace TeamsTrayStarter
 
                     _settings.StartVpnFirstEnabled = true;
                     _settings.VpnConnectionName = selectionForm.SelectedConnectionName.Trim();
-                    Logger.Change("Start VPN first turned ON");
+                    Logger.Change("Start VPN first enabled");
                     Logger.Change($"VPN connection selected: {_settings.VpnConnectionName}");
                 }
                 else
                 {
                     _settings.StartVpnFirstEnabled = false;
                     _settings.VpnConnectionName = null;
-                    Logger.Change("Start VPN first turned OFF");
+                    Logger.Change("Start VPN first disabled");
                 }
 
                 SettingsManager.Save(_settings);

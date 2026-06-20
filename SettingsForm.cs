@@ -1,8 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Collections.Generic;
 using System.Windows.Forms;
 
 namespace TeamsTrayStarter
@@ -53,7 +53,6 @@ namespace TeamsTrayStarter
             const int dayTimeX = 100;
             const int dayRowStartY = 52;
             const int dayRowGap = 36;
-
             const int rightColumnX = 240;
             const int fileSectionLabelGap = 32;
             const int fileRowGap = 36;
@@ -64,13 +63,11 @@ namespace TeamsTrayStarter
             const int fileBrowseWidth = 100;
             const int fileActionX = 580;
             const int fileActionWidth = 100;
-
             const int futureOffDateWidth = 130;
             const int futureOffDateX = 550;
             const int vacationLabelY = 202;
             const int futureOffFromY = dayRowStartY + dayRowGap * 5;
             const int futureOffUntilY = dayRowStartY + dayRowGap * 6;
-
             const int buttonWidth = 100;
             const int buttonHeight = 36;
             const int bottomMargin = 16;
@@ -78,16 +75,23 @@ namespace TeamsTrayStarter
             _daysHeaderLabel = CreateSectionLabel("Auto-start schedule", leftMargin, topHeaderY);
             Controls.Add(_daysHeaderLabel);
 
-            string[] dayLabels = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
-            DayLaunchSetting[] daySettings =
+            _dayRows = new[]
             {
-                _editedSettings.Mon, _editedSettings.Tue, _editedSettings.Wed, _editedSettings.Thu,
-                _editedSettings.Fri, _editedSettings.Sat, _editedSettings.Sun
+                CreateDayRow("Mon", _editedSettings.Mon, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 0,
+                    delegate(AppSettings settings, bool enabled, string time) { settings.Mon.Enabled = enabled; settings.Mon.Time = time; }),
+                CreateDayRow("Tue", _editedSettings.Tue, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 1,
+                    delegate(AppSettings settings, bool enabled, string time) { settings.Tue.Enabled = enabled; settings.Tue.Time = time; }),
+                CreateDayRow("Wed", _editedSettings.Wed, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 2,
+                    delegate(AppSettings settings, bool enabled, string time) { settings.Wed.Enabled = enabled; settings.Wed.Time = time; }),
+                CreateDayRow("Thu", _editedSettings.Thu, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 3,
+                    delegate(AppSettings settings, bool enabled, string time) { settings.Thu.Enabled = enabled; settings.Thu.Time = time; }),
+                CreateDayRow("Fri", _editedSettings.Fri, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 4,
+                    delegate(AppSettings settings, bool enabled, string time) { settings.Fri.Enabled = enabled; settings.Fri.Time = time; }),
+                CreateDayRow("Sat", _editedSettings.Sat, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 5,
+                    delegate(AppSettings settings, bool enabled, string time) { settings.Sat.Enabled = enabled; settings.Sat.Time = time; }),
+                CreateDayRow("Sun", _editedSettings.Sun, dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * 6,
+                    delegate(AppSettings settings, bool enabled, string time) { settings.Sun.Enabled = enabled; settings.Sun.Time = time; })
             };
-
-            _dayRows = dayLabels
-                .Select((label, index) => CreateDayRow(label, daySettings[index], dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * index))
-                .ToArray();
 
             foreach (var row in _dayRows)
             {
@@ -98,36 +102,35 @@ namespace TeamsTrayStarter
             Controls.Add(selectFilesLabel);
 
             int fileRowY = topHeaderY + fileSectionLabelGap;
-            var fileDefinitions = new[]
+            _fileRows = new[]
             {
-                new { SlotIndex = 1, Path = _editedSettings.File1Path, Enabled = _editedSettings.File1Enabled, ActionText = "Default" },
-                new { SlotIndex = 2, Path = _editedSettings.File2Path, Enabled = _editedSettings.File2Enabled, ActionText = "Default" },
-                new { SlotIndex = 3, Path = _editedSettings.File3Path, Enabled = _editedSettings.File3Enabled, ActionText = "Clear" },
-                new { SlotIndex = 4, Path = _editedSettings.File4Path, Enabled = _editedSettings.File4Enabled, ActionText = "Clear" }
-            };
+                CreateFileRow(1, _editedSettings.File1Path, _editedSettings.File1Enabled, fileRowY + fileRowGap * 0,
+                    fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth, fileActionX, fileActionWidth,
+                    "Default",
+                    delegate(AppSettings settings, bool enabled, string? path) { settings.File1Enabled = enabled; settings.File1Path = path; }),
 
-            _fileRows = fileDefinitions
-                .Select((definition, index) => CreateFileRow(
-                    definition.SlotIndex,
-                    definition.Path,
-                    definition.Enabled,
-                    fileRowY + fileRowGap * index,
-                    fileCheckX,
-                    fileTextX,
-                    fileTextWidth,
-                    fileBrowseX,
-                    fileBrowseWidth,
-                    fileActionX,
-                    fileActionWidth,
-                    definition.ActionText))
-                .ToArray();
+                CreateFileRow(2, _editedSettings.File2Path, _editedSettings.File2Enabled, fileRowY + fileRowGap * 1,
+                    fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth, fileActionX, fileActionWidth,
+                    "Default",
+                    delegate(AppSettings settings, bool enabled, string? path) { settings.File2Enabled = enabled; settings.File2Path = path; }),
+
+                CreateFileRow(3, _editedSettings.File3Path, _editedSettings.File3Enabled, fileRowY + fileRowGap * 2,
+                    fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth, fileActionX, fileActionWidth,
+                    "Clear",
+                    delegate(AppSettings settings, bool enabled, string? path) { settings.File3Enabled = enabled; settings.File3Path = path; }),
+
+                CreateFileRow(4, _editedSettings.File4Path, _editedSettings.File4Enabled, fileRowY + fileRowGap * 3,
+                    fileCheckX, fileTextX, fileTextWidth, fileBrowseX, fileBrowseWidth, fileActionX, fileActionWidth,
+                    "Clear",
+                    delegate(AppSettings settings, bool enabled, string? path) { settings.File4Enabled = enabled; settings.File4Path = path; })
+            };
 
             foreach (var row in _fileRows)
             {
                 row.CheckBox.CheckedChanged += FileCheckBox_CheckedChanged;
-                row.CheckBox.CheckedChanged += (_, _) => UpdateFileRowEnabledState(row);
-                row.BrowseButton.Click += (_, _) => BrowseForFile(row);
-                row.ActionButton.Click += (_, _) => ApplyRowAction(row);
+                row.CheckBox.CheckedChanged += (_, __) => UpdateFileRowEnabledState(row);
+                row.BrowseButton.Click += (_, __) => BrowseForFile(row);
+                row.ActionButton.Click += (_, __) => ApplyRowAction(row);
                 UpdateFileRowEnabledState(row);
             }
 
@@ -192,14 +195,13 @@ namespace TeamsTrayStarter
             int buttonY = ClientSize.Height - buttonHeight - bottomMargin;
 
             _okButton = CreateSystemButton("OK", leftMargin, buttonY, buttonWidth, buttonHeight, AnchorStyles.Left | AnchorStyles.Bottom);
-            _okButton.Click += (_, _) => OnOk();
+            _okButton.Click += (_, __) => OnOk();
 
             _cancelButton = CreateSystemButton("Cancel", ClientSize.Width - leftMargin - buttonWidth, buttonY, buttonWidth, buttonHeight, AnchorStyles.Right | AnchorStyles.Bottom);
-            _cancelButton.Click += (_, _) => Close();
+            _cancelButton.Click += (_, __) => Close();
 
             Controls.Add(_okButton);
             Controls.Add(_cancelButton);
-
             AcceptButton = _okButton;
             CancelButton = _cancelButton;
 
@@ -232,7 +234,7 @@ namespace TeamsTrayStarter
             };
         }
 
-        private DayRow CreateDayRow(string dayAbbrev, DayLaunchSetting currentDaySetting, int checkX, int dayX, int timeX, int y)
+        private DayRow CreateDayRow(string dayAbbrev, DayLaunchSetting currentDaySetting, int checkX, int dayX, int timeX, int y, Action<AppSettings, bool, string> applyToSettings)
         {
             var checkBox = new CheckBox
             {
@@ -264,7 +266,7 @@ namespace TeamsTrayStarter
                 ? DateTime.Today.Add(time)
                 : DateTime.Today.AddHours(9);
 
-            checkBox.CheckedChanged += (_, _) =>
+            checkBox.CheckedChanged += (_, __) =>
             {
                 timePicker.Enabled = checkBox.Checked;
                 dayLabel.ForeColor = checkBox.Checked ? EnabledTextColor : DisabledTextColor;
@@ -274,10 +276,10 @@ namespace TeamsTrayStarter
             Controls.Add(dayLabel);
             Controls.Add(timePicker);
 
-            return new DayRow(checkBox, timePicker);
+            return new DayRow(checkBox, timePicker, applyToSettings);
         }
 
-        private FileRow CreateFileRow(int slotIndex, string? path, bool isChecked, int y, int checkX, int textX, int textWidth, int browseX, int browseWidth, int actionX, int actionWidth, string actionText)
+        private FileRow CreateFileRow(int slotIndex, string? path, bool isChecked, int y, int checkX, int textX, int textWidth, int browseX, int browseWidth, int actionX, int actionWidth, string actionText, Action<AppSettings, bool, string?> applyToSettings)
         {
             var checkBox = new CheckBox
             {
@@ -300,8 +302,6 @@ namespace TeamsTrayStarter
             };
 
             var browseButton = CreateSystemButton("Browse...", browseX, y, browseWidth, 32, AnchorStyles.Top | AnchorStyles.Left);
-            browseButton.Enabled = true;
-
             var actionButton = CreateSystemButton(actionText, actionX, y, actionWidth, 32, AnchorStyles.Top | AnchorStyles.Left);
             actionButton.Enabled = !string.IsNullOrWhiteSpace(path);
 
@@ -310,22 +310,19 @@ namespace TeamsTrayStarter
             Controls.Add(browseButton);
             Controls.Add(actionButton);
 
-            return new FileRow(slotIndex, checkBox, textBox, browseButton, actionButton, actionText, path);
+            return new FileRow(slotIndex, checkBox, textBox, browseButton, actionButton, actionText, path, applyToSettings);
         }
 
         private void WireFutureOffControls()
         {
             _autoStartOffCheckBox_CheckedChanged(null, EventArgs.Empty);
-
             _autoStartOffFromCheckBox.CheckedChanged += _autoStartOffCheckBox_CheckedChanged;
-
-            _autoStartOffUntilCheckBox.CheckedChanged += (_, _) =>
+            _autoStartOffUntilCheckBox.CheckedChanged += (_, __) =>
             {
                 _autoStartOffUntilCheckBox.ForeColor = _autoStartOffUntilCheckBox.Checked ? EnabledTextColor : DisabledTextColor;
                 _autoStartOffUntilDatePicker.Enabled = _autoStartOffFromCheckBox.Checked && _autoStartOffUntilCheckBox.Checked;
             };
-
-            _autoStartOffFromDatePicker.ValueChanged += (_, _) =>
+            _autoStartOffFromDatePicker.ValueChanged += (_, __) =>
             {
                 _autoStartOffUntilDatePicker.MinDate = _autoStartOffFromDatePicker.Value.Date;
                 if (_autoStartOffUntilDatePicker.Value.Date < _autoStartOffFromDatePicker.Value.Date)
@@ -340,12 +337,10 @@ namespace TeamsTrayStarter
             bool fromChecked = _autoStartOffFromCheckBox.Checked;
             _autoStartOffFromCheckBox.ForeColor = fromChecked ? EnabledTextColor : DisabledTextColor;
             _autoStartOffFromDatePicker.Enabled = fromChecked;
-
             if (!fromChecked)
             {
                 _autoStartOffUntilCheckBox.Checked = false;
             }
-
             _autoStartOffUntilCheckBox.Enabled = fromChecked;
             _autoStartOffUntilCheckBox.ForeColor = _autoStartOffUntilCheckBox.Checked ? EnabledTextColor : DisabledTextColor;
             _autoStartOffUntilDatePicker.Enabled = fromChecked && _autoStartOffUntilCheckBox.Checked;
@@ -368,10 +363,8 @@ namespace TeamsTrayStarter
                 CheckFileExists = true,
                 Multiselect = false
             };
-
             if (dialog.ShowDialog() != DialogResult.OK)
                 return;
-
             row.Path = dialog.FileName;
             row.TextBox.Text = SettingsManager.GetFileLineText(row.SlotIndex, row.Path);
             UpdateFileRowEnabledState(row);
@@ -382,12 +375,10 @@ namespace TeamsTrayStarter
         {
             row.Path = null;
             row.TextBox.Text = SettingsManager.GetFileLineText(row.SlotIndex, row.Path);
-
             if (!row.IsDefaultAction)
             {
                 row.CheckBox.Checked = false;
             }
-
             UpdateFileRowEnabledState(row);
             UpdateFileActionButtonStates();
         }
@@ -402,27 +393,21 @@ namespace TeamsTrayStarter
 
         private void FileCheckBox_CheckedChanged(object? sender, EventArgs e)
         {
-            if (sender is not CheckBox changedCheckBox)
-                return;
-
-            PreventLastCheckedItemFromBeingUnchecked(
-                changedCheckBox,
-                _fileRows.Select(row => row.CheckBox));
+            if (sender is CheckBox changedCheckBox)
+            {
+                PreventLastCheckedItemFromBeingUnchecked(changedCheckBox, _fileRows.Select(r => r.CheckBox));
+            }
         }
 
         private void DayCheckBox_CheckedChanged(object? sender, EventArgs e)
         {
-            if (sender is not CheckBox changedCheckBox)
-                return;
-
-            PreventLastCheckedItemFromBeingUnchecked(
-                changedCheckBox,
-                _dayRows.Select(row => row.CheckBox));
+            if (sender is CheckBox changedCheckBox)
+            {
+                PreventLastCheckedItemFromBeingUnchecked(changedCheckBox, _dayRows.Select(r => r.CheckBox));
+            }
         }
 
-        private static void PreventLastCheckedItemFromBeingUnchecked(
-            CheckBox changedCheckBox,
-            IEnumerable<CheckBox> checkBoxes)
+        private static void PreventLastCheckedItemFromBeingUnchecked(CheckBox changedCheckBox, IEnumerable<CheckBox> checkBoxes)
         {
             int checkedCount = 0;
             foreach (var checkBox in checkBoxes)
@@ -430,7 +415,6 @@ namespace TeamsTrayStarter
                 if (checkBox.Checked)
                     checkedCount++;
             }
-
             if (checkedCount == 0)
             {
                 changedCheckBox.Checked = true;
@@ -441,7 +425,6 @@ namespace TeamsTrayStarter
         {
             if (string.IsNullOrWhiteSpace(row.Path) || File.Exists(row.Path))
                 return true;
-
             string slotLabel = SettingsManager.GetSlotLabel(row.SlotIndex);
             MessageBox.Show(
                 this,
@@ -449,7 +432,6 @@ namespace TeamsTrayStarter
                 $"Missing {slotLabel} file",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
-
             return false;
         }
 
@@ -504,65 +486,37 @@ namespace TeamsTrayStarter
 
         private void ApplyDayRowsToSettings()
         {
-            DayLaunchSetting[] daySettings =
+            foreach (var row in _dayRows)
             {
-                _editedSettings.Mon, _editedSettings.Tue, _editedSettings.Wed, _editedSettings.Thu,
-                _editedSettings.Fri, _editedSettings.Sat, _editedSettings.Sun
-            };
-
-            for (int i = 0; i < _dayRows.Length; i++)
-            {
-                daySettings[i].Enabled = _dayRows[i].CheckBox.Checked;
-                daySettings[i].Time = _dayRows[i].TimePicker.Value.ToString("HH:mm");
+                row.ApplyToSettings(_editedSettings, row.CheckBox.Checked, row.TimePicker.Value.ToString("HH:mm"));
             }
         }
 
         private void ApplyFileRowsToSettings()
         {
-            Action<int, FileRow> apply = (slotIndex, row) =>
-            {
-                switch (slotIndex)
-                {
-                    case 1:
-                        _editedSettings.File1Enabled = row.CheckBox.Checked;
-                        _editedSettings.File1Path = row.Path;
-                        break;
-                    case 2:
-                        _editedSettings.File2Enabled = row.CheckBox.Checked;
-                        _editedSettings.File2Path = row.Path;
-                        break;
-                    case 3:
-                        _editedSettings.File3Enabled = row.CheckBox.Checked;
-                        _editedSettings.File3Path = row.Path;
-                        break;
-                    case 4:
-                        _editedSettings.File4Enabled = row.CheckBox.Checked;
-                        _editedSettings.File4Path = row.Path;
-                        break;
-                }
-            };
-
             foreach (var row in _fileRows)
             {
-                apply(row.SlotIndex, row);
+                row.ApplyToSettings(_editedSettings, row.CheckBox.Checked, row.Path);
             }
         }
 
         private sealed class DayRow
         {
-            public DayRow(CheckBox checkBox, DateTimePicker timePicker)
+            public DayRow(CheckBox checkBox, DateTimePicker timePicker, Action<AppSettings, bool, string> applyToSettings)
             {
                 CheckBox = checkBox;
                 TimePicker = timePicker;
+                ApplyToSettings = applyToSettings;
             }
 
             public CheckBox CheckBox { get; }
             public DateTimePicker TimePicker { get; }
+            public Action<AppSettings, bool, string> ApplyToSettings { get; }
         }
 
         private sealed class FileRow
         {
-            public FileRow(int slotIndex, CheckBox checkBox, TextBox textBox, Button browseButton, Button actionButton, string actionText, string? path)
+            public FileRow(int slotIndex, CheckBox checkBox, TextBox textBox, Button browseButton, Button actionButton, string actionText, string? path, Action<AppSettings, bool, string?> applyToSettings)
             {
                 SlotIndex = slotIndex;
                 CheckBox = checkBox;
@@ -571,6 +525,7 @@ namespace TeamsTrayStarter
                 ActionButton = actionButton;
                 ActionText = actionText;
                 Path = path;
+                ApplyToSettings = applyToSettings;
             }
 
             public int SlotIndex { get; }
@@ -581,6 +536,7 @@ namespace TeamsTrayStarter
             public string ActionText { get; }
             public bool IsDefaultAction => string.Equals(ActionText, "Default", StringComparison.OrdinalIgnoreCase);
             public string? Path { get; set; }
+            public Action<AppSettings, bool, string?> ApplyToSettings { get; }
         }
     }
 }

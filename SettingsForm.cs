@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 using System.Windows.Forms;
 
 namespace TeamsTrayStarter
@@ -42,6 +43,7 @@ namespace TeamsTrayStarter
             Font = new Font("Segoe UI", 9F, FontStyle.Regular);
             BackColor = Color.White;
             ClientSize = new Size(700, 400);
+
             SuspendLayout();
 
             const int leftMargin = 16;
@@ -51,6 +53,7 @@ namespace TeamsTrayStarter
             const int dayTimeX = 100;
             const int dayRowStartY = 52;
             const int dayRowGap = 36;
+
             const int rightColumnX = 240;
             const int fileSectionLabelGap = 32;
             const int fileRowGap = 36;
@@ -61,11 +64,13 @@ namespace TeamsTrayStarter
             const int fileBrowseWidth = 100;
             const int fileActionX = 580;
             const int fileActionWidth = 100;
+
             const int futureOffDateWidth = 130;
             const int futureOffDateX = 550;
             const int vacationLabelY = 202;
             const int futureOffFromY = dayRowStartY + dayRowGap * 5;
             const int futureOffUntilY = dayRowStartY + dayRowGap * 6;
+
             const int buttonWidth = 100;
             const int buttonHeight = 36;
             const int bottomMargin = 16;
@@ -83,6 +88,11 @@ namespace TeamsTrayStarter
             _dayRows = dayLabels
                 .Select((label, index) => CreateDayRow(label, daySettings[index], dayCheckX, dayLabelX, dayTimeX, dayRowStartY + dayRowGap * index))
                 .ToArray();
+
+            foreach (var row in _dayRows)
+            {
+                row.CheckBox.CheckedChanged += DayCheckBox_CheckedChanged;
+            }
 
             var selectFilesLabel = CreateSectionLabel("Select file(s) to launch", rightColumnX, topHeaderY);
             Controls.Add(selectFilesLabel);
@@ -115,11 +125,12 @@ namespace TeamsTrayStarter
             foreach (var row in _fileRows)
             {
                 row.CheckBox.CheckedChanged += FileCheckBox_CheckedChanged;
-                row.CheckBox.CheckedChanged += (_, __) => UpdateFileRowEnabledState(row);
-                row.BrowseButton.Click += (_, __) => BrowseForFile(row);
-                row.ActionButton.Click += (_, __) => ApplyRowAction(row);
+                row.CheckBox.CheckedChanged += (_, _) => UpdateFileRowEnabledState(row);
+                row.BrowseButton.Click += (_, _) => BrowseForFile(row);
+                row.ActionButton.Click += (_, _) => ApplyRowAction(row);
                 UpdateFileRowEnabledState(row);
             }
+
             UpdateFileActionButtonStates();
 
             _vacationModeLabel = CreateSectionLabel("Vacation mode", rightColumnX, vacationLabelY);
@@ -179,16 +190,19 @@ namespace TeamsTrayStarter
             WireFutureOffControls();
 
             int buttonY = ClientSize.Height - buttonHeight - bottomMargin;
+
             _okButton = CreateSystemButton("OK", leftMargin, buttonY, buttonWidth, buttonHeight, AnchorStyles.Left | AnchorStyles.Bottom);
-            _okButton.Click += (_, __) => OnOk();
+            _okButton.Click += (_, _) => OnOk();
 
             _cancelButton = CreateSystemButton("Cancel", ClientSize.Width - leftMargin - buttonWidth, buttonY, buttonWidth, buttonHeight, AnchorStyles.Right | AnchorStyles.Bottom);
-            _cancelButton.Click += (_, __) => Close();
+            _cancelButton.Click += (_, _) => Close();
 
             Controls.Add(_okButton);
             Controls.Add(_cancelButton);
+
             AcceptButton = _okButton;
             CancelButton = _cancelButton;
+
             ResumeLayout(false);
             PerformLayout();
         }
@@ -250,7 +264,7 @@ namespace TeamsTrayStarter
                 ? DateTime.Today.Add(time)
                 : DateTime.Today.AddHours(9);
 
-            checkBox.CheckedChanged += (_, __) =>
+            checkBox.CheckedChanged += (_, _) =>
             {
                 timePicker.Enabled = checkBox.Checked;
                 dayLabel.ForeColor = checkBox.Checked ? EnabledTextColor : DisabledTextColor;
@@ -259,6 +273,7 @@ namespace TeamsTrayStarter
             Controls.Add(checkBox);
             Controls.Add(dayLabel);
             Controls.Add(timePicker);
+
             return new DayRow(checkBox, timePicker);
         }
 
@@ -294,6 +309,7 @@ namespace TeamsTrayStarter
             Controls.Add(textBox);
             Controls.Add(browseButton);
             Controls.Add(actionButton);
+
             return new FileRow(slotIndex, checkBox, textBox, browseButton, actionButton, actionText, path);
         }
 
@@ -302,12 +318,14 @@ namespace TeamsTrayStarter
             _autoStartOffCheckBox_CheckedChanged(null, EventArgs.Empty);
 
             _autoStartOffFromCheckBox.CheckedChanged += _autoStartOffCheckBox_CheckedChanged;
-            _autoStartOffUntilCheckBox.CheckedChanged += (_, __) =>
+
+            _autoStartOffUntilCheckBox.CheckedChanged += (_, _) =>
             {
                 _autoStartOffUntilCheckBox.ForeColor = _autoStartOffUntilCheckBox.Checked ? EnabledTextColor : DisabledTextColor;
                 _autoStartOffUntilDatePicker.Enabled = _autoStartOffFromCheckBox.Checked && _autoStartOffUntilCheckBox.Checked;
             };
-            _autoStartOffFromDatePicker.ValueChanged += (_, __) =>
+
+            _autoStartOffFromDatePicker.ValueChanged += (_, _) =>
             {
                 _autoStartOffUntilDatePicker.MinDate = _autoStartOffFromDatePicker.Value.Date;
                 if (_autoStartOffUntilDatePicker.Value.Date < _autoStartOffFromDatePicker.Value.Date)
@@ -350,6 +368,7 @@ namespace TeamsTrayStarter
                 CheckFileExists = true,
                 Multiselect = false
             };
+
             if (dialog.ShowDialog() != DialogResult.OK)
                 return;
 
@@ -363,6 +382,7 @@ namespace TeamsTrayStarter
         {
             row.Path = null;
             row.TextBox.Text = SettingsManager.GetFileLineText(row.SlotIndex, row.Path);
+
             if (!row.IsDefaultAction)
             {
                 row.CheckBox.Checked = false;
@@ -385,10 +405,29 @@ namespace TeamsTrayStarter
             if (sender is not CheckBox changedCheckBox)
                 return;
 
+            PreventLastCheckedItemFromBeingUnchecked(
+                changedCheckBox,
+                _fileRows.Select(row => row.CheckBox));
+        }
+
+        private void DayCheckBox_CheckedChanged(object? sender, EventArgs e)
+        {
+            if (sender is not CheckBox changedCheckBox)
+                return;
+
+            PreventLastCheckedItemFromBeingUnchecked(
+                changedCheckBox,
+                _dayRows.Select(row => row.CheckBox));
+        }
+
+        private static void PreventLastCheckedItemFromBeingUnchecked(
+            CheckBox changedCheckBox,
+            IEnumerable<CheckBox> checkBoxes)
+        {
             int checkedCount = 0;
-            foreach (var row in _fileRows)
+            foreach (var checkBox in checkBoxes)
             {
-                if (row.CheckBox.Checked)
+                if (checkBox.Checked)
                     checkedCount++;
             }
 
@@ -410,6 +449,7 @@ namespace TeamsTrayStarter
                 $"Missing {slotLabel} file",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
+
             return false;
         }
 

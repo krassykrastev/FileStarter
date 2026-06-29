@@ -56,6 +56,40 @@ namespace TeamsTrayStarter
             return result.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
         }
 
+        public static bool DisconnectVpn(string vpnName)
+        {
+            try
+            {
+                vpnName = vpnName?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(vpnName))
+                    return false;
+
+                if (!IsVpnConnected(vpnName))
+                {
+                    Logger.Change($"VPN already disconnected: {vpnName}");
+                    return true;
+                }
+
+                var result = RunProcess("rasdial.exe", $"\"{vpnName}\" /disconnect");
+                if (result.ExitCode == 0)
+                {
+                    Logger.Change($"VPN disconnected: {vpnName}");
+                    return true;
+                }
+
+                string details = (result.StdOut + " " + result.StdErr)
+                    .Replace(Environment.NewLine, " ")
+                    .Trim();
+                Logger.Other($"VPN disconnect failed for '{vpnName}'. rasdial returned {result.ExitCode} => {details}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Other($"VPN disconnect failed for '{vpnName}'.", ex);
+                return false;
+            }
+        }
+
         public async Task<bool> EnsureVpnConnectedAsync(
             AppSettings settings,
             Action<string, string, ToolTipIcon> notify,

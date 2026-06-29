@@ -94,10 +94,9 @@ namespace TeamsTrayStarter
             _trayIcon.MouseDoubleClick += TrayIcon_MouseDoubleClick;
 
             TryApplyRunAtStartupSetting();
-            UpdateVpnReconnectMonitorState();
             UpdateTrayUi();
             _scheduler.StartOrReschedule();
-            UpdateVpnReconnectMonitorState();
+            UpdateVpnReconnectMonitorState(connectImmediately: true);
             _ = ConnectVpnAtStartupAsync();
         }
 
@@ -216,7 +215,7 @@ namespace TeamsTrayStarter
         {
             _settings = settings;
             SettingsManager.Save(_settings);
-            UpdateVpnReconnectMonitorState();
+            UpdateVpnReconnectMonitorState(connectImmediately: false);
             UpdateTrayUi();
         }
 
@@ -267,20 +266,20 @@ namespace TeamsTrayStarter
             {
                 _trayIcon.Text = effectiveAutoStart ? "Auto-start enabled" : "Auto-start disabled";
             }
-
             ScheduleNextTooltipUpdate();
         }
 
-        private void UpdateVpnReconnectMonitorState()
+        private void UpdateVpnReconnectMonitorState(bool connectImmediately)
         {
             bool shouldMonitor = _settings.StartVpnFirstEnabled && !string.IsNullOrWhiteSpace(_settings.VpnConnectionName);
             if (shouldMonitor)
             {
                 if (!_vpnReconnectTimer.Enabled)
                     _vpnReconnectTimer.Start();
+                if (connectImmediately)
+                    _ = MonitorVpnConnectionAsync();
                 return;
             }
-
             _vpnReconnectTimer.Stop();
             SetVpnReconnectFailed(false, notifyOnce: false);
         }
@@ -289,20 +288,17 @@ namespace TeamsTrayStarter
         {
             if (_vpnReconnectInProgress)
                 return;
-
             if (!_settings.StartVpnFirstEnabled || string.IsNullOrWhiteSpace(_settings.VpnConnectionName))
             {
-                UpdateVpnReconnectMonitorState();
+                UpdateVpnReconnectMonitorState(connectImmediately: false);
                 return;
             }
-
             string vpnName = _settings.VpnConnectionName.Trim();
             if (VpnService.IsVpnConnected(vpnName))
             {
                 SetVpnReconnectFailed(false, notifyOnce: false);
                 return;
             }
-
             _vpnReconnectInProgress = true;
             try
             {
@@ -334,17 +330,13 @@ namespace TeamsTrayStarter
         {
             bool changed = _vpnReconnectFailed != failed;
             _vpnReconnectFailed = failed;
-
             if (!failed)
-            {
                 _vpnReconnectFailureNotified = false;
-            }
             else if (notifyOnce && !_vpnReconnectFailureNotified)
             {
                 _vpnReconnectFailureNotified = true;
                 ShowBalloon("FileStarter", "Unable to auto-reconnect to VPN, try manually", ToolTipIcon.Error);
             }
-
             if (changed)
                 UpdateTrayUi();
         }
@@ -384,7 +376,6 @@ namespace TeamsTrayStarter
             _settings.AutoStartTeamsEnabled = !_settings.AutoStartTeamsEnabled;
             SettingsManager.Save(_settings);
             Logger.Change(_settings.AutoStartTeamsEnabled ? "Auto-start enabled" : "Auto-start disabled");
-            UpdateVpnReconnectMonitorState();
             UpdateTrayUi();
             _scheduler.StartOrReschedule();
         }
@@ -409,6 +400,19 @@ namespace TeamsTrayStarter
             }
         }
 
+        private void DisconnectSelectedVpnIfNeeded()
+        {
+            string vpnName = _settings.VpnConnectionName?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(vpnName))
+                return;
+
+            bool disconnected = VpnService.DisconnectVpn(vpnName);
+            if (!disconnected)
+            {
+                ShowBalloon("FileStarter", "Failed to disconnect VPN. Try manually.", ToolTipIcon.Warning);
+            }
+        }
+
         private void ToggleStartVpnFirst()
         {
             try
@@ -418,28 +422,22 @@ namespace TeamsTrayStarter
                     var vpnConnections = VpnService.GetAvailableVpnConnectionNames();
                     if (vpnConnections.Count == 0)
                     {
-                        MessageBox.Show(
-                            "No Windows VPN connections were found on this PC.",
-                            "No VPN connections found",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information);
+                        MessageBox.Show("No Windows VPN connections were found on this PC.", "No VPN connections found", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         _settings.StartVpnFirstEnabled = false;
                         _settings.VpnConnectionName = null;
-                        UpdateVpnReconnectMonitorState();
+                        UpdateVpnReconnectMonitorState(connectImmediately: false);
                         UpdateTrayUi();
                         return;
                     }
-
                     using var selectionForm = new VpnSelectionForm(vpnConnections);
                     if (selectionForm.ShowDialog() != DialogResult.OK || string.IsNullOrWhiteSpace(selectionForm.SelectedConnectionName))
                     {
                         _settings.StartVpnFirstEnabled = false;
                         _settings.VpnConnectionName = null;
-                        UpdateVpnReconnectMonitorState();
+                        UpdateVpnReconnectMonitorState(connectImmediately: false);
                         UpdateTrayUi();
                         return;
                     }
-
                     _settings.StartVpnFirstEnabled = true;
                     _settings.VpnConnectionName = selectionForm.SelectedConnectionName.Trim();
                     Logger.Change("Start VPN first & reconnect on drops enabled");
@@ -447,13 +445,13 @@ namespace TeamsTrayStarter
                 }
                 else
                 {
+                    DisconnectSelectedVpnIfNeeded();
                     _settings.StartVpnFirstEnabled = false;
                     _settings.VpnConnectionName = null;
                     Logger.Change("Start VPN first & reconnect on drops disabled");
                 }
-
                 SettingsManager.Save(_settings);
-                UpdateVpnReconnectMonitorState();
+                UpdateVpnReconnectMonitorState(connectImmediately: _settings.StartVpnFirstEnabled);
                 UpdateTrayUi();
             }
             catch (Exception ex)
@@ -703,7 +701,20 @@ namespace TeamsTrayStarter
             {
                 SettingsManager.LogSettingsChanges(before, _settings);
             }
-            UpdateVpnReconnectMonitorState();
+
+            bool vpnOptionChanged = before.StartVpnFirstEnabled != _settings.StartVpnFirstEnabled ||
+                                    !string.Equals(before.VpnConnectionName, _settings.VpnConnectionName, StringComparison.OrdinalIgnoreCase);
+            bool shouldDisconnectVpn = before.StartVpnFirstEnabled && !_settings.StartVpnFirstEnabled &&
+                                       !string.IsNullOrWhiteSpace(before.VpnConnectionName);
+            if (shouldDisconnectVpn)
+            {
+                bool disconnected = VpnService.DisconnectVpn(before.VpnConnectionName!.Trim());
+                if (!disconnected)
+                {
+                    ShowBalloon("FileStarter", "Failed to disconnect VPN. Try manually.", ToolTipIcon.Warning);
+                }
+            }
+            UpdateVpnReconnectMonitorState(connectImmediately: _settings.StartVpnFirstEnabled && vpnOptionChanged);
             UpdateTrayUi();
             _scheduler.StartOrReschedule();
         }
@@ -867,14 +878,13 @@ namespace TeamsTrayStarter
             g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
             g.Clear(Color.Transparent);
             g.DrawIcon(baseIcon, new Rectangle(-1, -1, renderSize + 4, renderSize + 4));
+
             if (!enabled)
-            {
                 DrawBusyBadge(g, renderSize);
-            }
+
             if (vpnReconnectFailed)
-            {
                 DrawVpnReconnectFailureBadge(g, renderSize);
-            }
+
             IntPtr hIcon = bmp.GetHicon();
             try
             {
@@ -920,9 +930,8 @@ namespace TeamsTrayStarter
         private static Icon LoadBaseIcon(int renderSize)
         {
             if (!string.IsNullOrWhiteSpace(BaseIconPath) && File.Exists(BaseIconPath))
-            {
                 return new Icon(BaseIconPath, new Size(renderSize, renderSize));
-            }
+
             string? exePath = Environment.ProcessPath;
             if (!string.IsNullOrWhiteSpace(exePath) && File.Exists(exePath))
             {
@@ -930,6 +939,7 @@ namespace TeamsTrayStarter
                 if (exeIcon != null)
                     return new Icon(exeIcon, new Size(renderSize, renderSize));
             }
+
             return new Icon(SystemIcons.Application, new Size(renderSize, renderSize));
         }
 

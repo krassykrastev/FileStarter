@@ -68,7 +68,7 @@ namespace TeamsTrayStarter
                 if (string.IsNullOrWhiteSpace(vpnName))
                 {
                     Logger.Other("VPN start requested but no VPN connection is selected.");
-                    notify("FileStarter", "Start VPN first is enabled, but no VPN connection is selected.", ToolTipIcon.Warning);
+                    notify("FileStarter", "Start VPN first & reconnect on drops is enabled, but no VPN connection is selected.", ToolTipIcon.Warning);
                     return false;
                 }
 
@@ -114,7 +114,7 @@ namespace TeamsTrayStarter
                     var result = MessageBox.Show(
                         $"The VPN connection '{vpnName}' can't be established yet.{Environment.NewLine}{Environment.NewLine}" +
                         "Click OK to wait 1 more minute and try again." + Environment.NewLine +
-                        "Click Cancel to disable 'Start VPN first'.",
+                        "Click Cancel to disable 'Start VPN first & reconnect on drops'.",
                         "VPN connection can't be established",
                         MessageBoxButtons.OKCancel,
                         MessageBoxIcon.Warning);
@@ -129,8 +129,8 @@ namespace TeamsTrayStarter
                         else
                             SettingsManager.Save(settings);
 
-                        Logger.Change("Start VPN first turned OFF");
-                        notify("FileStarter", "Start VPN first was disabled because the VPN connection could not be established.", ToolTipIcon.Warning);
+                        Logger.Change("Start VPN first & reconnect on drops disabled");
+                        notify("FileStarter", "Start VPN first & reconnect on drops was disabled because the VPN connection could not be established.", ToolTipIcon.Warning);
                         return false;
                     }
                 }
@@ -202,7 +202,7 @@ namespace TeamsTrayStarter
             }
         }
 
-        private static bool IsVpnConnected(string vpnName)
+        public static bool IsVpnConnected(string vpnName)
         {
             try
             {

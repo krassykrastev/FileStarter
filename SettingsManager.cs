@@ -276,7 +276,7 @@ namespace TeamsTrayStarter
             var changes = new List<string>();
 
             AddEnableDisableChange(changes, "Run on Windows startup", before.RunAppAtStartup, after.RunAppAtStartup);
-            AddEnableDisableChange(changes, "Start VPN first", before.StartVpnFirstEnabled, after.StartVpnFirstEnabled);
+            AddEnableDisableChange(changes, "Start VPN first & reconnect on drops", before.StartVpnFirstEnabled, after.StartVpnFirstEnabled);
             AddPathChange(changes, 1, before.File1Path, after.File1Path);
             AddPathChange(changes, 2, before.File2Path, after.File2Path);
             AddPathChange(changes, 3, before.File3Path, after.File3Path);

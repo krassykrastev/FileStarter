@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
@@ -17,7 +18,7 @@ namespace TeamsTrayStarter
         private const string RunValueName = "FileStarter";
         private const int TrayIconSize = 32;
         private const int WM_NULL = 0x0000;
-        private const int VpnReconnectIntervalMs = 30000;
+        private const int VpnReconnectIntervalMs = 300000;
 
         private readonly NotifyIcon _trayIcon;
         private readonly ContextMenuStrip _trayMenu;
@@ -29,6 +30,7 @@ namespace TeamsTrayStarter
         private readonly System.Windows.Forms.Timer _singleLeftClickTimer;
         private readonly System.Windows.Forms.Timer _tooltipUpdateTimer;
         private readonly System.Windows.Forms.Timer _vpnReconnectTimer;
+        private readonly RasConnectionMonitor _rasConnectionMonitor;
         private readonly VpnService _vpnService = new();
 
         private AppSettings _settings;
@@ -42,6 +44,7 @@ namespace TeamsTrayStarter
         private bool _vpnReconnectInProgress;
         private bool _vpnReconnectFailed;
         private bool _vpnReconnectFailureNotified;
+        private bool _networkChangeEventsSubscribed;
 
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -90,6 +93,9 @@ namespace TeamsTrayStarter
             _tooltipUpdateTimer.Tick += (_, _) => UpdateTrayUi();
             _vpnReconnectTimer = new System.Windows.Forms.Timer { Interval = VpnReconnectIntervalMs };
             _vpnReconnectTimer.Tick += async (_, _) => await MonitorVpnConnectionAsync();
+            _rasConnectionMonitor = new RasConnectionMonitor(ScheduleVpnMonitorCheckFromAnyThread);
+            _rasConnectionMonitor.Start();
+            SubscribeNetworkChangeEvents();
             _trayIcon.MouseClick += TrayIcon_MouseClick;
             _trayIcon.MouseDoubleClick += TrayIcon_MouseDoubleClick;
 
@@ -267,6 +273,55 @@ namespace TeamsTrayStarter
                 _trayIcon.Text = effectiveAutoStart ? "Auto-start enabled" : "Auto-start disabled";
             }
             ScheduleNextTooltipUpdate();
+        }
+
+        private void SubscribeNetworkChangeEvents()
+        {
+            if (_networkChangeEventsSubscribed)
+                return;
+
+            NetworkChange.NetworkAddressChanged += NetworkChange_Changed;
+            NetworkChange.NetworkAvailabilityChanged += NetworkChange_Changed;
+            _networkChangeEventsSubscribed = true;
+            Logger.Change("Network change monitor started");
+        }
+
+        private void UnsubscribeNetworkChangeEvents()
+        {
+            if (!_networkChangeEventsSubscribed)
+                return;
+
+            NetworkChange.NetworkAddressChanged -= NetworkChange_Changed;
+            NetworkChange.NetworkAvailabilityChanged -= NetworkChange_Changed;
+            _networkChangeEventsSubscribed = false;
+        }
+
+        private void NetworkChange_Changed(object? sender, EventArgs e)
+        {
+            ScheduleVpnMonitorCheckFromAnyThread();
+        }
+
+        private void ScheduleVpnMonitorCheckFromAnyThread()
+        {
+            try
+            {
+                if (_menuHostForm.IsDisposed || !_menuHostForm.IsHandleCreated)
+                    return;
+
+                _menuHostForm.BeginInvoke(new Action(() => _ = MonitorVpnConnectionAsync()));
+            }
+            catch (ObjectDisposedException)
+            {
+                // Application is shutting down.
+            }
+            catch (InvalidOperationException)
+            {
+                // The hidden host form is not ready or is already disposing.
+            }
+            catch (Exception ex)
+            {
+                Logger.Other("Failed to schedule VPN monitor check from notification.", ex);
+            }
         }
 
         private void UpdateVpnReconnectMonitorState(bool connectImmediately)
@@ -805,6 +860,8 @@ namespace TeamsTrayStarter
             _tooltipUpdateTimer.Dispose();
             _vpnReconnectTimer.Stop();
             _vpnReconnectTimer.Dispose();
+            UnsubscribeNetworkChangeEvents();
+            _rasConnectionMonitor.Dispose();
             _scheduler.Dispose();
             _trayIcon.Visible = false;
             _trayIcon.Dispose();

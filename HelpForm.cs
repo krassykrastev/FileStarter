@@ -96,10 +96,12 @@ namespace TeamsTrayStarter
                 BackColor = Color.White,
                 Text =
 @"FileStarter is a lightweight Windows tray application that automatically launches apps or files based on a configurable schedule. It is designed to be simple, reliable, and unobtrusive — perfect for automating your daily startup routine.    
+
 • Tray icon behavior:    
   - Single click on the tray icon toggles Auto-start ON or OFF.    
   - Double click on the tray icon opens Settings.    
   - Right click on the tray icon opens the context menu.    
+
 • Context menu options:    
   - Auto-start ON / OFF -> Enables or disables automatic launching.    
   - Run FileStarter on Windows startup -> Starts FileStarter automatically when you sign in to Windows.    
@@ -111,6 +113,7 @@ namespace TeamsTrayStarter
   - Help -> Opens this Help window.    
   - About -> Shows version and author information.    
   - Exit -> Closes FileStarter.      
+
 • What you can control in Settings:    
   - Auto-start schedule -> Choose the days of the week and the launch time for each day.    
   - Select file(s) to launch -> Choose up to 4 files or applications to launch.    

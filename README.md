@@ -23,7 +23,7 @@ FileStarter is a lightweight Windows tray application written in C# with Visual 
 🔹 System tray integration with quick controls  
 🔹 Startup health check for missing custom files  
 🔹 Shows notifications for broken paths or other alerts  
-🔹 Starts VPN on startup & reconnect on drops 
+🔹 Starts VPN on startup & reconnect on drops  
 🔹 Logs changes and other important events  
 🔹 Log file is automatically cleared at 1 MB to prevent growth  
 
